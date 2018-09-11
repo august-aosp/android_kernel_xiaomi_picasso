@@ -22,7 +22,7 @@ struct ion_dma_buf_attachment {
 static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 static const struct file_operations ion_fops = {
 	.unlocked_ioctl = ion_ioctl,
-	.compat_ioctl = ion_ioctl
+	.compat_ioctl = compat_ptr_ioctl
 };
 
 static struct ion_device ion_dev = {
