@@ -117,16 +117,6 @@ struct sde_crtc_mixer {
 };
 
 /**
- * struct sde_crtc_frame_event_cb_data : info of drm objects of a frame event
- * @crtc:       pointer to drm crtc object registered for frame event
- * @connector:  pointer to drm connector which is source of frame event
- */
-struct sde_crtc_frame_event_cb_data {
-	struct drm_crtc *crtc;
-	struct drm_connector *connector;
-};
-
-/**
  * struct sde_crtc_frame_event: stores crtc frame event for crtc processing
  * @work:	base work structure
  * @crtc:	Pointer to crtc handling this event
