@@ -20,7 +20,7 @@
 		compatible = "xiaomi,spi-for-tp";
 		reg = <0>;
 		status = "ok";
-		spi-max-frequency = <10000000>;  //10M
+		spi-max-frequency = <15000000>;  //15M
 	};
 };
 
