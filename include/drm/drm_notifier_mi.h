@@ -38,6 +38,8 @@ enum msm_drm_display_id {
 #define MI_DRM_EVENT_BLANK			0x01
 /* A hardware display blank early change occurred */
 #define MI_DRM_EARLY_EVENT_BLANK		0x02
+/* A hardware display blank more early change occured */
+#define MI_DRM_PRE_EVENT_BLANK          0x03
 
 enum {
 	MI_DRM_BLANK_UNBLANK = 0,
