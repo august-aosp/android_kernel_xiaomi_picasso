@@ -211,14 +211,10 @@ void fuse_finish_open(struct inode *inode, struct file *file)
 		fi->attr_version = atomic64_inc_return(&fc->attr_version);
 		i_size_write(inode, 0);
 		spin_unlock(&fi->lock);
-		truncate_pagecache(inode, 0);
 		fuse_invalidate_attr(inode);
 		if (fc->writeback_cache)
 			file_update_time(file);
-	} else if (!(ff->open_flags & FOPEN_KEEP_CACHE)) {
-		invalidate_inode_pages2(inode->i_mapping);
 	}
-
 	if ((file->f_mode & FMODE_WRITE) && fc->writeback_cache)
 		fuse_link_write_file(file);
 }
@@ -253,19 +249,28 @@ int fuse_open_common(struct inode *inode, struct file *file, bool isdir)
 	}
 #endif
 
-	if (is_wb_truncate) {
+	if (is_wb_truncate)
 		inode_lock(inode);
+
+	if (is_wb_truncate)
 		fuse_set_nowrite(inode);
-	}
 
 	err = fuse_do_open(fm, get_node_id(inode), file, isdir);
 	if (!err)
 		fuse_finish_open(inode, file);
 
-	if (is_wb_truncate) {
+	if (is_wb_truncate)
 		fuse_release_nowrite(inode);
-		inode_unlock(inode);
+	if (!err) {
+		struct fuse_file *ff = file->private_data;
+
+		if (fc->atomic_o_trunc && (file->f_flags & O_TRUNC))
+			truncate_pagecache(inode, 0);
+		else if (!(ff->open_flags & FOPEN_KEEP_CACHE))
+			invalidate_inode_pages2(inode->i_mapping);
 	}
+	if (is_wb_truncate)
+		inode_unlock(inode);
 
 	return err;
 }
