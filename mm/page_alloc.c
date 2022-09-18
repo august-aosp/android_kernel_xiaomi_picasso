@@ -4243,7 +4243,9 @@ static int
 __perform_reclaim(gfp_t gfp_mask, unsigned int order,
 					const struct alloc_context *ac)
 {
-	struct reclaim_state reclaim_state;
+	struct reclaim_state reclaim_state = {
+		.reclaimed_slab = 0,
+	};
 	int progress;
 	unsigned int noreclaim_flag;
 	unsigned long pflags;
