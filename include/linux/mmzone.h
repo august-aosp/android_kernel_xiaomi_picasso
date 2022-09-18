@@ -306,6 +306,7 @@ struct zone_reclaim_stat {
 
 struct lruvec;
 struct mem_cgroup;
+struct page_vma_mapped_walk;
 
 #define LRU_GEN_MASK		((BIT(LRU_GEN_WIDTH) - 1) << LRU_GEN_PGOFF)
 #define LRU_REFS_MASK		((BIT(LRU_REFS_WIDTH) - 1) << LRU_REFS_PGOFF)
@@ -361,6 +362,7 @@ struct lru_gen_struct {
 };
 
 void lru_gen_init_lruvec(struct lruvec *lruvec);
+void lru_gen_look_around(struct page_vma_mapped_walk *pvmw);
 
 #ifdef CONFIG_MEMCG
 void lru_gen_init_memcg(struct mem_cgroup *memcg);
@@ -370,6 +372,10 @@ void lru_gen_exit_memcg(struct mem_cgroup *memcg);
 #else /* !CONFIG_LRU_GEN */
 
 static inline void lru_gen_init_lruvec(struct lruvec *lruvec)
+{
+}
+
+static inline void lru_gen_look_around(struct page_vma_mapped_walk *pvmw)
 {
 }
 
