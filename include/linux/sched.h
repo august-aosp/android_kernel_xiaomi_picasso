@@ -858,7 +858,7 @@ struct task_struct {
 	const struct sched_class	*sched_class;
 	struct sched_entity		se;
 	struct sched_rt_entity		rt;
-	u64				 last_sleep_ts;
+	u64				last_sleep_ts;
 
 	int				boost;
 	u64				boost_period;
@@ -883,9 +883,6 @@ struct task_struct {
 
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group		*sched_task_group;
-#endif
-#ifdef CONFIG_SCHED_TUNE
-	int				stune_idx;
 #endif
 	struct sched_dl_entity		dl;
 
@@ -1485,9 +1482,6 @@ struct task_struct {
 	/* Used by LSM modules for access restriction: */
 	void				*security;
 #endif
-#ifdef CONFIG_ANDROID_SIMPLE_LMK
-	struct task_struct		*simple_lmk_next;
-#endif
 	/* task is frozen/stopped (used by the cgroup freezer) */
 	ANDROID_KABI_USE(1, unsigned frozen:1);
 
@@ -1515,9 +1509,17 @@ struct task_struct {
 	struct mutex			futex_exit_mutex;
 #endif
 
+	/* bca62a0ae565 ("sched/tune: Fix improper accounting of tasks") */
+#ifdef CONFIG_SCHED_TUNE
+	ANDROID_KABI_USE(7, int stune_idx);
+#else
 	ANDROID_KABI_RESERVE(7);
+#endif
 	ANDROID_KABI_RESERVE(8);
 
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	struct task_struct		*simple_lmk_next;
+#endif
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
@@ -1714,6 +1716,7 @@ extern struct pid *cad_pid;
 #define PF_RANDOMIZE		0x00400000	/* Randomize virtual address space */
 #define PF_SWAPWRITE		0x00800000	/* Allowed to write to swap */
 #define PF_MEMSTALL		0x01000000	/* Stalled due to lack of memory */
+#define PF_PERF_CRITICAL	0x02000000	/* Thread is performance-critical */
 #define PF_NO_SETAFFINITY	0x04000000	/* Userland is not allowed to meddle with cpus_allowed */
 #define PF_MCE_EARLY		0x08000000      /* Early kill for mce process policy */
 #define PF_WAKE_UP_IDLE         0x10000000	/* TTWU on an idle CPU */
@@ -1749,7 +1752,7 @@ extern struct pid *cad_pid;
 #define tsk_used_math(p)			((p)->flags & PF_USED_MATH)
 #define used_math()				tsk_used_math(current)
 
-static inline bool is_percpu_thread(void)
+static __always_inline bool is_percpu_thread(void)
 {
 #ifdef CONFIG_SMP
 	return (current->flags & PF_NO_SETAFFINITY) &&
@@ -1833,6 +1836,11 @@ static inline bool cpupri_check_rt(void)
 	return false;
 }
 #endif
+
+void sched_migrate_to_cpumask_start(struct cpumask *old_mask,
+				    const struct cpumask *dest);
+void sched_migrate_to_cpumask_end(const struct cpumask *old_mask,
+				  const struct cpumask *dest);
 
 #ifndef cpu_relax_yield
 #define cpu_relax_yield() cpu_relax()
@@ -2100,6 +2108,7 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 # define vcpu_is_preempted(cpu)	false
 #endif
 
+extern long msm_sched_setaffinity(pid_t pid, struct cpumask *new_mask);
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 

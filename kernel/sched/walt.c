@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/syscore_ops.h>
@@ -2654,6 +2653,7 @@ int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb)
 				    CPUFREQ_TRANSITION_NOTIFIER);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(register_cpu_cycle_counter_cb);
 
 static void transfer_busy_time(struct rq *rq, struct related_thread_group *grp,
 				struct task_struct *p, int event);
@@ -3140,6 +3140,7 @@ void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin, u32 fmax)
 	if (update_capacity)
 		walt_cpus_capacity_changed(cpus);
 }
+EXPORT_SYMBOL_GPL(sched_update_cpu_freq_min_max);
 
 void note_task_waking(struct task_struct *p, u64 wallclock)
 {
@@ -3742,6 +3743,7 @@ void sched_set_refresh_rate(enum fps fps)
 		sched_window_nr_ticks_change();
 	}
 }
+EXPORT_SYMBOL(sched_set_refresh_rate);
 
 /* Migration margins */
 unsigned int sysctl_sched_capacity_margin_up[MAX_MARGIN_LEVELS] = {
