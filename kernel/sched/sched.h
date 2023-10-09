@@ -1046,7 +1046,7 @@ struct rq {
 	struct sched_domain	*sd;
 
 	unsigned long		cpu_capacity;
-	unsigned long		cpu_capacity_orig;
+	unsigned long		fits_capacity_threshold;
 
 	struct callback_head	*balance_callback;
 
@@ -2291,11 +2291,6 @@ static inline unsigned long capacity_of(int cpu)
 	return cpu_rq(cpu)->cpu_capacity;
 }
 
-static inline unsigned long capacity_orig_of(int cpu)
-{
-	return cpu_rq(cpu)->cpu_capacity_orig;
-}
-
 static inline unsigned long task_util(struct task_struct *p)
 {
 	return READ_ONCE(p->se.avg.util_avg);
@@ -2351,13 +2346,13 @@ static inline unsigned long __cpu_util(int cpu)
 	if (sched_feat(UTIL_EST))
 		util = max(util, READ_ONCE(cfs_rq->avg.util_est));
 
-	return min_t(unsigned long, util, capacity_orig_of(cpu));
+	return min_t(unsigned long, util, arch_scale_cpu_capacity(cpu));
 }
 
 static inline unsigned long cpu_util_cum(int cpu, int delta)
 {
 	u64 util = cpu_rq(cpu)->cfs.avg.util_avg;
-	unsigned long capacity = capacity_orig_of(cpu);
+	unsigned long capacity = arch_scale_cpu_capacity(cpu);
 
 	delta += util;
 	if (delta < 0)
@@ -2923,7 +2918,7 @@ static inline unsigned long cpu_util_rt(struct rq *rq)
 static inline unsigned long cpu_util(int cpu)
 {
 	return min(__cpu_util(cpu) + cpu_util_rt(cpu_rq(cpu)),
-		   capacity_orig_of(cpu));
+		   arch_scale_cpu_capacity(cpu));
 }
 #endif
 
