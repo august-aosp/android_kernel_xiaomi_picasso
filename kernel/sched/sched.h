@@ -330,6 +330,8 @@ struct dl_bw {
 
 static inline void __dl_update(struct dl_bw *dl_b, s64 bw);
 
+u64 approximate_runtime(unsigned long util);
+
 static inline
 void __dl_sub(struct dl_bw *dl_b, u64 tsk_bw, int cpus)
 {
