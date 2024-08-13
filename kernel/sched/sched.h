@@ -1976,7 +1976,7 @@ struct sched_class {
 	 *   next = pick_task();
 	 *   if (next) {
 	 *       put_prev_task(prev);
-	 *       set_next_task_first(next);
+	 *       put_prev_set_next_task(prev, next);
 	 *   }
 	 */
 	struct task_struct *(*pick_next_task)(struct rq *rq, struct task_struct *prev);
@@ -2036,8 +2036,16 @@ static inline void set_next_task(struct rq *rq, struct task_struct *next)
 	next->sched_class->set_next_task(rq, next, false);
 }
 
-static inline void set_next_task_first(struct rq *rq, struct task_struct *next)
+static inline void put_prev_set_next_task(struct rq *rq,
+					  struct task_struct *prev,
+					  struct task_struct *next)
 {
+	WARN_ON_ONCE(rq->curr != prev);
+
+	if (next == prev)
+		return;
+
+	prev->sched_class->put_prev_task(rq, prev);
 	next->sched_class->set_next_task(rq, next, true);
 }
 
