@@ -1410,32 +1410,26 @@ static inline void rq_clock_cancel_skipupdate(struct rq *rq)
 struct rq_flags {
 	unsigned long flags;
 	struct pin_cookie cookie;
-#ifdef CONFIG_SCHED_DEBUG
 	/*
 	 * A copy of (rq::clock_update_flags & RQCF_UPDATED) for the
 	 * current pin context is stashed here in case it needs to be
 	 * restored in rq_repin_lock().
 	 */
 	unsigned int clock_update_flags;
-#endif
 };
 
 static inline void rq_pin_lock(struct rq *rq, struct rq_flags *rf)
 {
 	rf->cookie = lockdep_pin_lock(&rq->lock);
 
-#ifdef CONFIG_SCHED_DEBUG
 	rq->clock_update_flags &= (RQCF_REQ_SKIP|RQCF_ACT_SKIP);
 	rf->clock_update_flags = 0;
-#endif
 }
 
 static inline void rq_unpin_lock(struct rq *rq, struct rq_flags *rf)
 {
-#ifdef CONFIG_SCHED_DEBUG
 	if (rq->clock_update_flags > RQCF_ACT_SKIP)
 		rf->clock_update_flags = RQCF_UPDATED;
-#endif
 
 	lockdep_unpin_lock(&rq->lock, rf->cookie);
 }
@@ -1444,12 +1438,10 @@ static inline void rq_repin_lock(struct rq *rq, struct rq_flags *rf)
 {
 	lockdep_repin_lock(&rq->lock, rf->cookie);
 
-#ifdef CONFIG_SCHED_DEBUG
 	/*
 	 * Restore the value we stashed in @rf for this pin context.
 	 */
 	rq->clock_update_flags |= rf->clock_update_flags;
-#endif
 }
 
 struct rq *__task_rq_lock(struct task_struct *p, struct rq_flags *rf)
@@ -1672,9 +1664,7 @@ struct sched_group_capacity {
 	unsigned long		max_capacity;		/* Max per-CPU capacity in group */
 	int			imbalance;		/* XXX unrelated to capacity but shared group state */
 
-#ifdef CONFIG_SCHED_DEBUG
 	int			id;
-#endif
 
 	unsigned long		cpumask[0];		/* Balance mask */
 };
@@ -1721,7 +1711,7 @@ static inline unsigned int group_first_cpu(struct sched_group *group)
 
 extern int group_balance_cpu(struct sched_group *sg);
 
-#if defined(CONFIG_SCHED_DEBUG) && defined(CONFIG_SYSCTL)
+#ifdef CONFIG_SYSCTL
 void register_sched_domain_sysctl(void);
 void dirty_sched_domain_sysctl(int cpu);
 void unregister_sched_domain_sysctl(void);
@@ -2591,7 +2581,6 @@ extern struct sched_entity *__pick_root_entity(struct cfs_rq *cfs_rq);
 extern struct sched_entity *__pick_first_entity(struct cfs_rq *cfs_rq);
 extern struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq);
 
-#ifdef	CONFIG_SCHED_DEBUG
 extern bool sched_debug_enabled;
 
 extern void print_cfs_stats(struct seq_file *m, int cpu);
@@ -2607,7 +2596,6 @@ extern void
 print_numa_stats(struct seq_file *m, int node, unsigned long tsf,
 	unsigned long tpf, unsigned long gsf, unsigned long gpf);
 #endif /* CONFIG_NUMA_BALANCING */
-#endif /* CONFIG_SCHED_DEBUG */
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq);
