@@ -1826,14 +1826,8 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 }
 
 /*
- * Tunables that become constants when CONFIG_SCHED_DEBUG is off:
+ * Tunables:
  */
-#ifdef CONFIG_SCHED_DEBUG
-# include <linux/static_key.h>
-# define const_debug __read_mostly
-#else
-# define const_debug const
-#endif
 
 #define sched_feat(x) SCHED_FEAT_##x
 
@@ -2268,8 +2262,8 @@ extern void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags);
 #define SCHED_NR_MIGRATE_BREAK 32
 #endif
 
-extern const_debug unsigned int sysctl_sched_nr_migrate;
-extern const_debug unsigned int sysctl_sched_migration_cost;
+extern __read_mostly unsigned int sysctl_sched_nr_migrate;
+extern __read_mostly unsigned int sysctl_sched_migration_cost;
 
 #ifdef CONFIG_SCHED_BORE
 extern unsigned int sysctl_sched_min_base_slice;
