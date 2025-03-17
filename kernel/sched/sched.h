@@ -80,12 +80,6 @@
 #include "cpudeadline.h"
 #include "features.h"
 
-#ifdef CONFIG_SCHED_DEBUG
-# define SCHED_WARN_ON(x)	WARN_ONCE(x, #x)
-#else
-# define SCHED_WARN_ON(x)	({ (void)(x), 0; })
-#endif
-
 struct rq;
 struct cpuidle_state;
 
@@ -1271,7 +1265,7 @@ DECLARE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 static inline struct task_struct *task_of(struct sched_entity *se)
 {
-	SCHED_WARN_ON(!entity_is_task(se));
+	WARN_ON_ONCE(!entity_is_task(se));
 	return container_of(se, struct task_struct, se);
 }
 
@@ -1360,7 +1354,7 @@ static inline void assert_clock_updated(struct rq *rq)
 	 * The only reason for not seeing a clock update since the
 	 * last rq_pin_lock() is if we're currently skipping updates.
 	 */
-	SCHED_WARN_ON(rq->clock_update_flags < RQCF_ACT_SKIP);
+	WARN_ON_ONCE(rq->clock_update_flags < RQCF_ACT_SKIP);
 }
 
 static inline u64 rq_clock(struct rq *rq)
@@ -2106,7 +2100,7 @@ static inline void idle_set_state(struct rq *rq,
 
 static inline struct cpuidle_state *idle_get_state(struct rq *rq)
 {
-	SCHED_WARN_ON(!rcu_read_lock_held());
+	WARN_ON_ONCE(!rcu_read_lock_sched_held());
 
 	return rq->idle_state;
 }
