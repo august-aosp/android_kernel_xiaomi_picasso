@@ -106,6 +106,8 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
+#include <linux/sched/bore.h>
+
 #include <trace/events/sched.h>
 
 #define CREATE_TRACE_POINTS
@@ -2155,6 +2157,11 @@ static __latent_entropy struct task_struct *copy_process(
 
 	p->start_time = ktime_get_ns();
 	p->real_start_time = ktime_get_boot_ns();
+
+#ifdef CONFIG_SCHED_BORE
+	if (likely(p->pid))
+		sched_clone_bore(p, current, clone_flags, p->start_time);
+#endif // CONFIG_SCHED_BORE
 
 	/*
 	 * Make it visible to the rest of the system, but dont wake it up yet.
