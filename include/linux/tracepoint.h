@@ -155,9 +155,11 @@ static inline struct tracepoint *tracepoint_ptr_deref(tracepoint_ptr_t *p)
  * wants to be able to disable its tracepoints from being created
  * it can define NOTRACE before including the tracepoint headers.
  */
+#ifndef CONFIG_BPF_TRACE_ONLY
 #if defined(CONFIG_TRACEPOINTS) && !defined(NOTRACE)
 #define TRACEPOINTS_ENABLED
 #endif
+#endif /* CONFIG_BPF_TRACE_ONLY */
 
 #ifdef TRACEPOINTS_ENABLED
 
