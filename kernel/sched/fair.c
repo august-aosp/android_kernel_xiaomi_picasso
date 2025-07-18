@@ -27,7 +27,9 @@
 
 #include "walt.h"
 
+#ifdef CONFIG_SCHED_BORE
 #include <linux/sched/bore.h>
+#endif // CONFIG_SCHED_BORE
 
 #ifdef CONFIG_SMP
 static inline bool task_fits_max(struct task_struct *p, int cpu);
@@ -1203,8 +1205,7 @@ static void update_curr(struct cfs_rq *cfs_rq)
 	schedstat_add(cfs_rq->exec_clock, delta_exec);
 
 #ifdef CONFIG_SCHED_BORE
-	curr->burst_time += delta_exec;
-	update_burst_penalty(curr);
+	update_curr_bore(delta_exec, curr);
 #endif // CONFIG_SCHED_BORE
 	curr->vruntime += calc_delta_fair(delta_exec, curr);
 	resched = update_deadline(cfs_rq, curr);
@@ -3250,13 +3251,21 @@ dequeue_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se) { }
 
 static void place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags);
 
+#ifdef CONFIG_SCHED_BORE
+void reweight_entity(struct cfs_rq *cfs_rq, struct sched_entity *se,
+			    unsigned long weight, bool no_update_curr)
+#else // !CONFIG_SCHED_BORE
 void reweight_entity(struct cfs_rq *cfs_rq, struct sched_entity *se,
 			    unsigned long weight)
+#endif // CONFIG_SCHED_BORE
 {
 	bool curr = cfs_rq->curr == se;
 
 	if (se->on_rq) {
 		/* commit outstanding execution time */
+#ifdef CONFIG_SCHED_BORE
+		if (!no_update_curr)
+#endif // CONFIG_SCHED_BORE
 		update_curr(cfs_rq);
 		update_entity_lag(cfs_rq, se);
 		se->deadline -= se->vruntime;
@@ -3311,7 +3320,11 @@ void reweight_task(struct task_struct *p, const struct load_weight *lw)
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	struct load_weight *load = &se->load;
 
+#ifdef CONFIG_SCHED_BORE
+	reweight_entity(cfs_rq, se, lw->weight, false);
+#else // !CONFIG_SCHED_BORE
 	reweight_entity(cfs_rq, se, lw->weight);
+#endif // CONFIG_SCHED_BORE
 	load->inv_weight = lw->inv_weight;
 }
 
@@ -3454,7 +3467,11 @@ static void update_cfs_group(struct sched_entity *se)
 #endif
 
 	if (unlikely(se->load.weight != shares))
+#ifdef CONFIG_SCHED_BORE
+		reweight_entity(cfs_rq_of(se), se, shares, false);
+#else // !CONFIG_SCHED_BORE
 		reweight_entity(cfs_rq_of(se), se, shares);
+#endif // CONFIG_SCHED_BORE
 }
 
 #else /* CONFIG_FAIR_GROUP_SCHED */
@@ -13041,10 +13058,6 @@ static void attach_task_cfs_rq(struct task_struct *p)
 
 static void switched_from_fair(struct rq *rq, struct task_struct *p)
 {
-	p->se.rel_deadline = 0;
-#ifdef CONFIG_SCHED_BORE
-	reset_task_bore(p);
-#endif // CONFIG_SCHED_BORE
 	detach_task_cfs_rq(p);
 }
 
@@ -13052,6 +13065,9 @@ static void switched_to_fair(struct rq *rq, struct task_struct *p)
 {
 	SCHED_WARN_ON(p->se.sched_delayed);
 
+#ifdef CONFIG_SCHED_BORE
+	reset_task_bore(p);
+#endif // CONFIG_SCHED_BORE
 	attach_task_cfs_rq(p);
 
 	set_task_max_allowed_capacity(p);

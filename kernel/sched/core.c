@@ -18,7 +18,9 @@
 
 #include <soc/qcom/minidump.h>
 
+#ifdef CONFIG_SCHED_BORE
 #include <linux/sched/bore.h>
+#endif // CONFIG_SCHED_BORE
 
 #include "../workqueue_internal.h"
 #include "../smpboot.h"

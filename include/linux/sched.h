@@ -502,10 +502,10 @@ struct sched_statistics {
 
 #ifdef CONFIG_SCHED_BORE
 struct sched_burst_cache {
-	u8				score;
+	u32				value;
 	u32				count;
 	u64				timestamp;
-    spinlock_t		lock;
+	spinlock_t		lock;
 };
 #endif // CONFIG_SCHED_BORE
 
@@ -539,10 +539,11 @@ struct sched_entity {
 	};
 #ifdef CONFIG_SCHED_BORE
 	u64				burst_time;
-	u8				prev_burst_penalty;
-	u8				curr_burst_penalty;
-	u8				burst_penalty;
+	u32				prev_burst_penalty;
+	u32				curr_burst_penalty;
+	u32				burst_penalty;
 	u8				burst_score;
+	u8				burst_count;
 	struct sched_burst_cache	child_burst;
 	struct sched_burst_cache	group_burst;
 #endif // CONFIG_SCHED_BORE

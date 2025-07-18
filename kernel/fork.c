@@ -106,7 +106,9 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
+#ifdef CONFIG_SCHED_BORE
 #include <linux/sched/bore.h>
+#endif // CONFIG_SCHED_BORE
 
 #include <trace/events/sched.h>
 

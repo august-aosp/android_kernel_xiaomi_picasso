@@ -133,8 +133,7 @@ static int sixty = 60;
 
 extern u8   __read_mostly sched_bore;
 extern u8   __read_mostly sched_burst_exclude_kthreads;
-extern u8   __read_mostly sched_burst_smoothness_long;
-extern u8   __read_mostly sched_burst_smoothness_short;
+extern u8   __read_mostly sched_burst_smoothness;
 extern u8   __read_mostly sched_burst_fork_atavistic;
 extern u8   __read_mostly sched_burst_parity_threshold;
 extern u8   __read_mostly sched_burst_penalty_offset;
@@ -143,8 +142,8 @@ extern uint __read_mostly sched_burst_cache_stop_count;
 extern uint __read_mostly sched_burst_cache_lifetime;
 extern uint __read_mostly sched_deadline_boost_mask;
 
-static int __maybe_unused sixty_four     = 64;
-static int __maybe_unused maxval_u8      = 255;
+static int __maybe_unused maxval_6_bits  =   63;
+static int __maybe_unused maxval_8_bits  =  255;
 static int __maybe_unused maxval_12_bits = 4095;
 #endif // CONFIG_SCHED_BORE
 
@@ -1649,22 +1648,13 @@ static struct ctl_table kern_table[] = {
 		.extra2		= &one,
 	},
 	{
-		.procname	= "sched_burst_smoothness_long",
-		.data		= &sched_burst_smoothness_long,
+		.procname	= "sched_burst_smoothness",
+		.data		= &sched_burst_smoothness,
 		.maxlen		= sizeof(u8),
 		.mode		= 0644,
 		.proc_handler = proc_dou8vec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one,
-	},
-	{
-		.procname	= "sched_burst_smoothness_short",
-		.data		= &sched_burst_smoothness_short,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one,
+		.extra1		= &one,
+		.extra2		= &maxval_8_bits,
 	},
 	{
 		.procname	= "sched_burst_fork_atavistic",
@@ -1682,7 +1672,7 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler = proc_dou8vec_minmax,
 		.extra1		= &zero,
-		.extra2		= &maxval_u8,
+		.extra2		= &maxval_8_bits,
 	},
 	{
 		.procname	= "sched_burst_penalty_offset",
@@ -1691,7 +1681,7 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler = proc_dou8vec_minmax,
 		.extra1		= &zero,
-		.extra2		= &sixty_four,
+		.extra2		= &maxval_6_bits,
 	},
 	{
 		.procname	= "sched_burst_penalty_scale",
