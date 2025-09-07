@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #ifndef _DSI_PANEL_H_
@@ -12,7 +11,6 @@
 #include <linux/bitops.h>
 #include <linux/errno.h>
 #include <linux/backlight.h>
-#include <linux/rtc.h>
 #include <drm/drm_panel.h>
 #include <drm/msm_drm.h>
 
@@ -85,9 +83,13 @@ struct dsi_dfps_capabilities {
 	u32 *dfps_list;
 	u32 dfps_list_len;
 	bool dfps_support;
-	/* smart fps control */
-	bool smart_fps_support;
-	u32 smart_fps_value;
+};
+
+struct dsi_qsync_capabilities {
+	/* qsync disabled if qsync_min_fps = 0 */
+	u32 qsync_min_fps;
+	u32 *qsync_min_fps_list;
+	int qsync_min_fps_list_len;
 };
 
 struct dsi_dyn_clk_caps {
@@ -117,6 +119,7 @@ struct dsi_backlight_config {
 	u32 bl_min_level;
 	u32 bl_max_level;
 	u32 brightness_max_level;
+	u32 brightness_init_level;
 	u32 bl_level;
 	u32 bl_scale;
 	u32 bl_scale_sv;
@@ -168,9 +171,6 @@ struct drm_panel_esd_config {
 	u8 *return_buf;
 	u8 *status_buf;
 	u32 groups;
-	int esd_err_irq_gpio;
-	int esd_err_irq;
-	int esd_err_irq_flags;
 };
 
 struct dsi_panel {
@@ -216,7 +216,7 @@ struct dsi_panel {
 
 	bool panel_initialized;
 	bool te_using_watchdog_timer;
-	u32 qsync_min_fps;
+	struct dsi_qsync_capabilities qsync_caps;
 
 	char dsc_pps_cmd[DSI_CMD_PPS_SIZE];
 	enum dsi_dms_mode dms_mode;
@@ -224,7 +224,6 @@ struct dsi_panel {
 	bool sync_broadcast_en;
 
 	struct dsi_panel_mi_cfg mi_cfg;
-
 	int panel_test_gpio;
 	int power_mode;
 	enum dsi_panel_physical_type panel_type;
@@ -333,6 +332,8 @@ int dsi_panel_switch(struct dsi_panel *panel);
 
 int dsi_panel_post_switch(struct dsi_panel *panel);
 
+int dsi_panel_dc_switch(struct dsi_panel *panel);
+
 void dsi_dsc_pclk_param_calc(struct msm_display_dsc_info *dsc, int intf_width);
 
 void dsi_panel_bl_handoff(struct dsi_panel *panel);
@@ -347,8 +348,6 @@ void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
 
 void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 		struct dsi_display_mode *mode, u32 frame_threshold_us);
-
-void dsi_panel_printf_andorid_time(const char *msg);
 
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type);

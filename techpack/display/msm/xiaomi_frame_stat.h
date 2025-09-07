@@ -26,7 +26,6 @@
 #define LONG_INTERVAL_FRAME_COUNT	(3)
 #define LONG_FRAME_INTERVAL			(70000)
 
-extern bool idle_status;
 extern struct drm_crtc *gcrtc;
 extern struct dsi_panel *g_panel;
 
@@ -55,9 +54,10 @@ struct frame_stat {
 	bool start;
 	/* enabled will be changed by user application, the false indicates smart dfps disabled */
 	bool enabled;
+	bool idle_status;
 	bool skip_once;
 	u64 last_fps;
-	int skip_count;
+	u64 skip_count;
 };
 
 void frame_stat_collector(u64 duration, enum stat_item item);

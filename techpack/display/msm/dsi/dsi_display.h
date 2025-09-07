@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #ifndef _DSI_DISPLAY_H_
@@ -397,6 +396,16 @@ void dsi_display_put_mode(struct dsi_display *display,
 int dsi_display_get_default_lms(void *dsi_display, u32 *num_lm);
 
 /**
+ * dsi_display_get_qsync_min_fps() - get qsync min fps for given fps
+ * @display:            Handle to display.
+ * @mode_fps:           Fps value of current mode
+ *
+ * Return: error code.
+ */
+int dsi_display_get_qsync_min_fps(void *dsi_display, u32 mode_fps);
+
+
+/**
  * dsi_display_find_mode() - retrieve cached DSI mode given relevant params
  * @display:            Handle to display.
  * @cmp:                Mode to use as comparison to find original
@@ -699,10 +708,6 @@ int dsi_display_pre_kickoff(struct drm_connector *connector,
 int dsi_display_pre_commit(void *display,
 		struct msm_display_conn_params *params);
 
-ssize_t wp_info_show(struct device *device,
-	    struct device_attribute *attr,
-		char *buf);
-
 /**
  * dsi_display_get_dst_format() - get dst_format from DSI display
  * @connector:        Pointer to drm connector structure
@@ -735,6 +740,9 @@ int dsi_display_cmd_engine_enable(struct dsi_display *display);
 int dsi_display_cmd_engine_disable(struct dsi_display *display);
 int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display);
 
+char *dsi_display_get_cmdline_panel_info(void);
+
 int dsi_display_hbm_set_disp_param(struct drm_connector *connector,
 				u32 param_type);
+
 #endif /* _DSI_DISPLAY_H_ */

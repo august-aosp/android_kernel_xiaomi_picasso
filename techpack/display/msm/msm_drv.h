@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -143,6 +142,7 @@ enum msm_mdp_crtc_property {
 	CRTC_PROP_DEST_SCALER_LUT_ED,
 	CRTC_PROP_DEST_SCALER_LUT_CIR,
 	CRTC_PROP_DEST_SCALER_LUT_SEP,
+	CRTC_PROP_DSPP_INFO,
 
 	/* # of blob properties */
 	CRTC_PROP_BLOBCOUNT,
@@ -518,6 +518,7 @@ struct msm_resource_caps_info {
  *				 used instead of panel TE in cmd mode panels
  * @roi_caps:           Region of interest capability info
  * @qsync_min_fps	Minimum fps supported by Qsync feature
+ * @has_qsync_min_fps_list True if dsi-supported-qsync-min-fps-list exits
  * @te_source		vsync source pin information
  */
 struct msm_display_info {
@@ -541,6 +542,8 @@ struct msm_display_info {
 	struct msm_roi_caps roi_caps;
 
 	uint32_t qsync_min_fps;
+	bool has_qsync_min_fps_list;
+
 	uint32_t te_source;
 };
 
@@ -591,15 +594,6 @@ struct msm_drm_thread {
 	struct task_struct *thread;
 	unsigned int crtc_id;
 	struct kthread_worker worker;
-};
-
-struct msm_idle {
-	u32 timeout_ms;
-	u32 encoder_mask;
-	u32 active_mask;
-
-	spinlock_t lock;
-	struct delayed_work work;
 };
 
 struct msm_drm_private {
@@ -712,8 +706,7 @@ struct msm_drm_private {
 
 	/* update the flag when msm driver receives shutdown notification */
 	bool shutdown_in_progress;
-
-	struct msm_idle idle;
+	ktime_t  complete_commit_time;
 };
 
 /* get struct msm_kms * from drm_device * */
@@ -896,7 +889,8 @@ struct drm_framebuffer *msm_framebuffer_create(struct drm_device *dev,
 		struct drm_file *file, const struct drm_mode_fb_cmd2 *mode_cmd);
 struct drm_framebuffer * msm_alloc_stolen_fb(struct drm_device *dev,
 		int w, int h, int p, uint32_t format);
-
+int msm_fb_obj_get_attrs(struct drm_gem_object *obj, int *fb_ns,
+		int *fb_sec, int *fb_sec_dir, unsigned long *flags);
 struct drm_fb_helper *msm_fbdev_init(struct drm_device *dev);
 void msm_fbdev_free(struct drm_device *dev);
 
@@ -979,7 +973,6 @@ static inline void __exit msm_mdp_unregister(void)
 }
 #endif
 
-void msm_idle_set_state(struct drm_encoder *encoder, bool active);
 #ifdef CONFIG_DEBUG_FS
 void msm_gem_describe(struct drm_gem_object *obj, struct seq_file *m);
 void msm_gem_describe_objects(struct list_head *list, struct seq_file *m);

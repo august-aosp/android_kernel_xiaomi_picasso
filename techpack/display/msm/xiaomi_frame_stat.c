@@ -6,7 +6,7 @@ ssize_t smart_fps_value_show(struct device *device,
 			   struct device_attribute *attr,
 			   char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", g_panel->dfps_caps.smart_fps_value);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g_panel->mi_cfg.smart_fps_value);
 }
 
 void frame_stat_notify(int data)
@@ -25,12 +25,13 @@ void frame_stat_notify(int data)
 		return;
 	}
 
-	g_panel->dfps_caps.smart_fps_value = data;
+	g_panel->mi_cfg.smart_fps_value = data;
+
 	sysfs_notify(&display->drm_conn->kdev->kobj, NULL, "smart_fps_value");
-	pr_debug("%s: fps = %d\n", __func__, g_panel->dfps_caps.smart_fps_value);
+	pr_debug("%s: fps = %d\n", __func__, g_panel->mi_cfg.smart_fps_value);
+
 	fm_stat.skip_count = 0;
 	fm_stat.last_fps = data;
-
 	return;
 }
 
@@ -38,30 +39,25 @@ void calc_fps(u64 duration, int input_event)
 {
 	ktime_t current_time_us;
 	u64 fps, diff_us, diff, curr_fps;
-	static bool restore_fps;
 
-	if (!g_panel->dfps_caps.smart_fps_support || !fm_stat.enabled)
+	if (!g_panel->mi_cfg.smart_fps_support || !fm_stat.enabled)
 		return;
 
 	if (input_event) {
-		restore_fps = true;
-		return;
-	}
-
-	/* input event */
-	if (restore_fps) {
-		restore_fps = 0;
-		frame_stat_notify(g_panel->dfps_caps.max_refresh_rate);
-		fm_stat.last_fps = g_panel->dfps_caps.max_refresh_rate;
-		pr_debug("%s: input event restore fps.\n", __func__);
-		fm_stat.skip_count = 0;
+		frame_stat_notify(0xFF); //0xFF used as a symbol of input event.
+		fm_stat.last_fps = g_panel->mi_cfg.smart_fps_max_framerate;
 		fm_stat.skip_once = true;
+		pr_debug("%s: input event restore fps.\n", __func__);
 		goto exit;
 	}
 
 	current_time_us = ktime_get();
-	if (idle_status) {
+	if (fm_stat.idle_status) {
 		if (fm_stat.last_fps != IDLE_FPS) {
+			if (g_panel->panel_mode == DSI_OP_CMD_MODE)
+				/* video panel will directly notify SDM */
+				frame_stat_notify(IDLE_FPS);
+
 			fm_stat.last_fps = IDLE_FPS;
 			pr_debug("%s: exit fps calc due to idle mode\n", __func__);
 		}
@@ -81,10 +77,11 @@ void calc_fps(u64 duration, int input_event)
 		fm_stat.last_frame_commit_time_us = current_time_us;
 		if (diff > LONG_FRAME_INTERVAL) {
 			fm_stat.skip_count++;
-			pr_debug("%s: Longer frame interval[%lld ms], count[%d]\n", __func__, diff/NANO_TO_MICRO, fm_stat.skip_count);
-			if (fm_stat.skip_count >= LONG_INTERVAL_FRAME_COUNT) {
+			pr_debug("%s: Long frame interval, frame interval[%lld ms], count[%d]\n", __func__, diff/NANO_TO_MICRO, fm_stat.skip_count);
+			if (fm_stat.skip_count > LONG_INTERVAL_FRAME_COUNT) {
 				/* Sometime  app refresh in low fps, here set 50hz */
 				frame_stat_notify(IDLE_FPS);
+				fm_stat.last_fps = IDLE_FPS;
 			}
 			goto exit;
 		} else
@@ -98,7 +95,7 @@ void calc_fps(u64 duration, int input_event)
 			goto exit;
 		}
 
-		/* Multiplying with 10 to get fps in floating point */
+		 /* Multiplying with 10 to get fps in floating point */
 		fps = fm_stat.frame_count * FPS_PERIOD_1_SEC * 10;
 		do_div(fps, diff_us);
 		curr_fps = (unsigned int)fps/10;

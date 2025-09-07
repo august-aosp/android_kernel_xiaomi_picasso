@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/list.h>
@@ -34,6 +33,8 @@
 
 #define DSI_CLOCK_BITRATE_RADIX 10
 #define MAX_TE_SOURCE_ID  2
+
+DEFINE_MUTEX(dsi_display_clk_mutex);
 
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
 static char dsi_display_secondary[MAX_CMDLINE_PARAM_LEN];
@@ -208,7 +209,6 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 
 	mutex_lock(&panel->panel_lock);
 	if (!dsi_panel_initialized(panel)) {
-		pr_err("[%s] --- panel not initialized, bl_lvl = %d\n", __func__, bl_lvl);
 		rc = -EINVAL;
 		goto error;
 	}
@@ -867,23 +867,6 @@ release_panel_lock:
 	return rc;
 }
 
-char oled_wp_str[20] = {0};
-
-static int __init
-oled_wp_setup(char* str)
-{
-	strlcpy(oled_wp_str, str, sizeof(oled_wp_str));
-	return 1;
-}
-__setup("androidboot.oled_wp=", oled_wp_setup);
-
-ssize_t wp_info_show(struct device *device,
-			struct device_attribute *attr,
-			char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", oled_wp_str);
-}
-
 static int dsi_display_cmd_prepare(const char *cmd_buf, u32 cmd_buf_len,
 		struct dsi_cmd_desc *cmd, u8 *payload, u32 payload_len)
 {
@@ -1109,7 +1092,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		mi_drm_notifier_call_chain(MI_DRM_EVENT_BLANK, &notify_data);
 		break;
 	case SDE_MODE_DPMS_ON:
-		mi_cfg->in_aod = false;
 		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
 			(display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
 			mi_drm_notifier_call_chain(MI_DRM_EARLY_EVENT_BLANK, &notify_data);
@@ -1118,7 +1100,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		}
 		break;
 	case SDE_MODE_DPMS_OFF:
-		mi_cfg->in_aod = false;
 	default:
 		return rc;
 	}
@@ -5058,6 +5039,116 @@ error:
 	return rc;
 }
 
+static ssize_t sysfs_dynamic_dsi_clk_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int rc = 0;
+	struct dsi_display *display;
+	struct dsi_display_ctrl *m_ctrl;
+	struct dsi_ctrl *ctrl;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		DSI_ERR("Invalid display\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&display->display_lock);
+
+	m_ctrl = &display->ctrl[display->cmd_master_idx];
+	ctrl = m_ctrl->ctrl;
+	if (ctrl)
+		display->cached_clk_rate = ctrl->clk_freq.byte_clk_rate
+					     * 8;
+
+	rc = snprintf(buf, PAGE_SIZE, "%d\n", display->cached_clk_rate);
+	DSI_DEBUG("%s: read dsi clk rate %d\n", __func__,
+		display->cached_clk_rate);
+
+	mutex_unlock(&display->display_lock);
+
+	return rc;
+}
+
+static ssize_t sysfs_dynamic_dsi_clk_write(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = 0;
+	int clk_rate;
+	struct dsi_display *display;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		DSI_ERR("Invalid display\n");
+		return -EINVAL;
+	}
+
+	rc = kstrtoint(buf, DSI_CLOCK_BITRATE_RADIX, &clk_rate);
+	if (rc) {
+		DSI_ERR("%s: kstrtoint failed. rc=%d\n", __func__, rc);
+		return rc;
+	}
+
+	if (display->panel->panel_mode != DSI_OP_CMD_MODE) {
+		DSI_ERR("only supported for command mode\n");
+		return -ENOTSUPP;
+	}
+
+	DSI_INFO("%s: bitrate param value: '%d'\n", __func__, clk_rate);
+
+	mutex_lock(&display->display_lock);
+	mutex_lock(&dsi_display_clk_mutex);
+
+	rc = dsi_display_dynamic_clk_configure_cmd(display, clk_rate);
+	if (rc)
+		DSI_ERR("Failed to configure dynamic clk\n");
+	else
+		rc = count;
+
+	mutex_unlock(&dsi_display_clk_mutex);
+	mutex_unlock(&display->display_lock);
+
+	return rc;
+
+}
+
+static DEVICE_ATTR(dynamic_dsi_clock, 0644,
+			sysfs_dynamic_dsi_clk_read,
+			sysfs_dynamic_dsi_clk_write);
+
+static struct attribute *dynamic_dsi_clock_fs_attrs[] = {
+	&dev_attr_dynamic_dsi_clock.attr,
+	NULL,
+};
+static struct attribute_group dynamic_dsi_clock_fs_attrs_group = {
+	.attrs = dynamic_dsi_clock_fs_attrs,
+};
+
+static int dsi_display_sysfs_init(struct dsi_display *display)
+{
+	int rc = 0;
+	struct device *dev = &display->pdev->dev;
+
+	if (display->panel->panel_mode == DSI_OP_CMD_MODE)
+		rc = sysfs_create_group(&dev->kobj,
+			&dynamic_dsi_clock_fs_attrs_group);
+
+	return rc;
+
+}
+
+static int dsi_display_sysfs_deinit(struct dsi_display *display)
+{
+	struct device *dev = &display->pdev->dev;
+
+	if (display->panel->panel_mode == DSI_OP_CMD_MODE)
+		sysfs_remove_group(&dev->kobj,
+			&dynamic_dsi_clock_fs_attrs_group);
+
+	return 0;
+
+}
+
 /**
  * dsi_display_bind - bind dsi device with controlling device
  * @dev:        Pointer to base of platform device
@@ -5128,6 +5219,12 @@ static int dsi_display_bind(struct device *dev,
 
 	atomic_set(&display->clkrate_change_pending, 0);
 	display->cached_clk_rate = 0;
+
+	rc = dsi_display_sysfs_init(display);
+	if (rc) {
+		DSI_ERR("[%s] sysfs init failed, rc=%d\n", display->name, rc);
+		goto error;
+	}
 
 	memset(&info, 0x0, sizeof(info));
 
@@ -5264,8 +5361,6 @@ static int dsi_display_bind(struct device *dev,
 	/* register te irq handler */
 	dsi_display_register_te_irq(display);
 
-	dsi_panel_procfs_init(display->panel);
-
 	goto error;
 
 error_host_deinit:
@@ -5280,6 +5375,7 @@ error_ctrl_deinit:
 		(void)dsi_phy_drv_deinit(display_ctrl->phy);
 		(void)dsi_ctrl_drv_deinit(display_ctrl->ctrl);
 	}
+	(void)dsi_display_sysfs_deinit(display);
 	(void)dsi_display_debugfs_deinit(display);
 error:
 	mutex_unlock(&display->display_lock);
@@ -5313,8 +5409,6 @@ static void dsi_display_unbind(struct device *dev,
 
 	mutex_lock(&display->display_lock);
 
-	dsi_panel_procfs_deinit(display->panel);
-
 	rc = dsi_panel_drv_deinit(display->panel);
 	if (rc)
 		DSI_ERR("[%s] failed to deinit panel driver, rc=%d\n",
@@ -5342,6 +5436,7 @@ static void dsi_display_unbind(struct device *dev,
 	}
 
 	atomic_set(&display->clkrate_change_pending, 0);
+	(void)dsi_display_sysfs_deinit(display);
 	(void)dsi_display_debugfs_deinit(display);
 
 	mutex_unlock(&display->display_lock);
@@ -6123,7 +6218,10 @@ int dsi_display_get_info(struct drm_connector *connector,
 	info->max_width = 1920;
 	info->max_height = 1080;
 	info->qsync_min_fps =
-		display->panel->qsync_min_fps;
+		display->panel->qsync_caps.qsync_min_fps;
+	info->has_qsync_min_fps_list =
+		(display->panel->qsync_caps.qsync_min_fps_list_len > 0) ?
+		true : false;
 
 	switch (display->panel->panel_mode) {
 	case DSI_OP_VIDEO_MODE:
@@ -6568,6 +6666,25 @@ int dsi_display_get_default_lms(void *dsi_display, u32 *num_lm)
 	return rc;
 }
 
+int dsi_display_get_qsync_min_fps(void *display_dsi, u32 mode_fps)
+{
+	struct dsi_display *display = (struct dsi_display *)display_dsi;
+	struct dsi_panel *panel;
+	u32 i;
+
+	if (display == NULL || display->panel == NULL)
+		return -EINVAL;
+
+	panel = display->panel;
+	for (i = 0; i < panel->dfps_caps.dfps_list_len; i++) {
+		if (panel->dfps_caps.dfps_list[i] == mode_fps)
+			return panel->qsync_caps.qsync_min_fps_list[i];
+	}
+	SDE_EVT32(mode_fps);
+	DSI_DEBUG("Invalid mode_fps %d\n", mode_fps);
+	return -EINVAL;
+}
+
 int dsi_display_find_mode(struct dsi_display *display,
 		const struct dsi_display_mode *cmp,
 		struct dsi_display_mode **out_mode)
@@ -6818,6 +6935,11 @@ int dsi_display_set_mode(struct dsi_display *display,
 	DSI_INFO("hactive= %d,vactive= %d,fps=%d\n",
 			timing.h_active, timing.v_active,
 			timing.refresh_rate);
+
+	if (display->panel->cur_mode->timing.refresh_rate != timing.refresh_rate) {
+		if (display->drm_conn && display->drm_conn->kdev)
+			sysfs_notify(&display->drm_conn->kdev->kobj, NULL, "dynamic_fps");
+	}
 
 	memcpy(display->panel->cur_mode, &adj_mode, sizeof(adj_mode));
 error:
@@ -7205,7 +7327,7 @@ int dsi_display_prepare(struct dsi_display *display)
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
 		if (display->is_cont_splash_enabled &&
 		    display->config.panel_mode == DSI_OP_VIDEO_MODE) {
-			DSI_ERR("DMS not supported on first frame, ignor\n");
+			DSI_ERR("DMS not supported on first frame\n");
 			rc = -EINVAL;
 			goto error;
 		}
@@ -7399,7 +7521,7 @@ static int dsi_display_qsync(struct dsi_display *display, bool enable)
 	int i;
 	int rc = 0;
 
-	if (!display->panel->qsync_min_fps) {
+	if (!display->panel->qsync_caps.qsync_min_fps) {
 		DSI_ERR("%s:ERROR: qsync set, but no fps\n", __func__);
 		return 0;
 	}
@@ -7427,7 +7549,7 @@ static int dsi_display_qsync(struct dsi_display *display, bool enable)
 	}
 
 exit:
-	SDE_EVT32(enable, display->panel->qsync_min_fps, rc);
+	SDE_EVT32(enable, display->panel->qsync_caps.qsync_min_fps, rc);
 	mutex_unlock(&display->display_lock);
 	return rc;
 }
@@ -7634,8 +7756,38 @@ int dsi_display_enable(struct dsi_display *display)
 		}
 
 		display->panel->panel_initialized = true;
-		display->panel->mi_cfg.panel_initialized = true;
 		DSI_DEBUG("cont splash enabled, display enable not required\n");
+
+		rc = dsi_panel_update_elvss_dimming(display->panel);
+		if (rc) {
+			DSI_ERR("[%s] failed to update elvss dimming parameter, rc=%d\n",
+			       display->name, rc);
+		}
+
+		rc = dsi_panel_read_gamma_param(display->panel);
+		if (rc) {
+			DSI_ERR("[%s] failed to read gamma para, rc=%d\n",
+				display->name, rc);
+		} else {
+			rc = dsi_panel_update_gamma_param(display->panel);
+			if (rc) {
+				DSI_ERR("[%s] failed to update gamma para, rc=%d\n",
+					display->name, rc);
+			}
+		}
+
+		rc = dsi_panel_read_dc_param(display->panel);
+		if (rc) {
+			DSI_ERR("[%s] failed to read DC para, rc=%d\n",
+				display->name, rc);
+		} else {
+			rc = dsi_panel_update_dc_param(display->panel);
+			if (rc) {
+				DSI_ERR("[%s] failed to update DC para, rc=%d\n",
+					display->name, rc);
+			}
+		}
+
 		return 0;
 	}
 
@@ -7674,10 +7826,28 @@ int dsi_display_enable(struct dsi_display *display)
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
 		rc = dsi_panel_switch(display->panel);
-		if (rc)
+		if (rc) {
 			DSI_ERR("[%s] failed to switch DSI panel mode, rc=%d\n",
 				   display->name, rc);
+			goto error;
+		}
 
+		if ((display->panel->mi_cfg.panel_id >> 8) == 0x4A3153004202) {
+
+			rc = dsi_panel_dc_switch(display->panel);
+			if (rc) {
+				DSI_ERR("[%s] failed to set dc command, rc=%d\n",
+					display->name, rc);
+				goto error;
+			}
+		}
+
+		rc = dsi_panel_switch_disp_rate_gpio(display->panel);
+		if (rc) {
+			DSI_ERR("[%s] failed to set disp_rate gpio, rc=%d\n",
+				   display->name, rc);
+			goto error;
+		}
 		goto error;
 	}
 
@@ -7972,6 +8142,36 @@ static void __exit dsi_display_unregister(void)
 	dsi_ctrl_drv_unregister();
 	dsi_phy_drv_unregister();
 }
+
+char *dsi_display_get_cmdline_panel_info(void)
+{
+	char *buffer = NULL, *buffer_dup = NULL;
+	char *pname = NULL;
+	char *panel_info = NULL;
+
+	buffer = kstrdup(dsi_display_primary, GFP_KERNEL);
+	if (!buffer)
+		return NULL;
+	buffer_dup = buffer;
+
+	buffer = strrchr(buffer, ',');
+	if (buffer && *buffer) {
+		pname = ++buffer;
+	} else {
+		goto exit;
+	}
+
+	buffer = strrchr(pname, ':');
+	if (buffer)
+		*buffer = '\0';
+
+	panel_info = kstrdup(pname, GFP_KERNEL);
+
+exit:
+	kfree(buffer_dup);
+	return panel_info;
+}
+
 module_param_string(dsi_display0, dsi_display_primary, MAX_CMDLINE_PARAM_LEN,
 								0600);
 MODULE_PARM_DESC(dsi_display0,
