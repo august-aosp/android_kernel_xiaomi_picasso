@@ -126,7 +126,6 @@ static inline void touch_press_release_events_collect(struct input_dev *dev,
 	return;
 }
 #endif
-extern void sde_crtc_touch_notify(void);
 
 static inline int is_event_supported(unsigned int code,
 				     unsigned long *bm, unsigned int max)
@@ -490,8 +489,6 @@ static void input_handle_event(struct input_dev *dev,
 		input_pass_values(dev, dev->vals, dev->num_vals);
 		dev->num_vals = 0;
 	}
-
-	sde_crtc_touch_notify();
 
 }
 
