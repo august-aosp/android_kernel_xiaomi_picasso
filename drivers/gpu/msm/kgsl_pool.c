@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
@@ -453,6 +452,9 @@ static unsigned long
 kgsl_pool_shrink_count_objects(struct shrinker *shrinker,
 					struct shrink_control *sc)
 {
+	/* Trigger mem_workqueue flush to free memory */
+	kgsl_schedule_work(&kgsl_driver.mem_work);
+
 	/* Return total pool size as everything in pool can be freed */
 	return kgsl_pool_size_total();
 }

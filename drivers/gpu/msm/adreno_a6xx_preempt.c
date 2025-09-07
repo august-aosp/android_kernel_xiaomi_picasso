@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  * Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
@@ -838,7 +837,7 @@ void a6xx_preemption_context_destroy(struct kgsl_context *context)
 	gpumem_free_entry(context->user_ctxt_record);
 
 	/* Put the extra ref from gpumem_alloc_entry() */
-	kgsl_mem_entry_put(context->user_ctxt_record);
+	kgsl_mem_entry_put_deferred(context->user_ctxt_record);
 }
 
 int a6xx_preemption_context_init(struct kgsl_context *context)
