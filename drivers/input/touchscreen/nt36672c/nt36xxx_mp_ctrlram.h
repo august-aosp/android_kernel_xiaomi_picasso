@@ -76,8 +76,8 @@ struct item_buf
 
 struct test_buf
 {
-//	spinlock_t tbuf_lock;
-//	bool update;
+/*	spinlock_t tbuf_lock;*/
+/*	bool update; */
 	struct item_buf shorttest;
 	struct item_buf opentest;
 	struct item_buf fwmutualtest;

@@ -80,16 +80,16 @@ static const struct nvt_ts_mem_map NT36675_memory_map = {
 	/* Phase 2 Host Download */
 	.BOOT_RDY_ADDR            = 0x3F10D,
 	/* BLD CRC */
-	.BLD_LENGTH_ADDR          = 0x3F138,	//0x3F138 ~ 0x3F13A	(3 bytes)
-	.ILM_LENGTH_ADDR          = 0x3F118,	//0x3F118 ~ 0x3F11A	(3 bytes)
-	.DLM_LENGTH_ADDR          = 0x3F130,	//0x3F130 ~ 0x3F132	(3 bytes)
-	.BLD_DES_ADDR             = 0x3F114,	//0x3F114 ~ 0x3F116	(3 bytes)
-	.ILM_DES_ADDR             = 0x3F128,	//0x3F128 ~ 0x3F12A	(3 bytes)
-	.DLM_DES_ADDR             = 0x3F12C,	//0x3F12C ~ 0x3F12E	(3 bytes)
-	.G_ILM_CHECKSUM_ADDR      = 0x3F100,	//0x3F100 ~ 0x3F103	(4 bytes)
-	.G_DLM_CHECKSUM_ADDR      = 0x3F104,	//0x3F104 ~ 0x3F107	(4 bytes)
-	.R_ILM_CHECKSUM_ADDR      = 0x3F120,	//0x3F120 ~ 0x3F123 (4 bytes)
-	.R_DLM_CHECKSUM_ADDR      = 0x3F124,	//0x3F124 ~ 0x3F127 (4 bytes)
+	.BLD_LENGTH_ADDR          = 0x3F138,	/*0x3F138 ~ 0x3F13A	(3 bytes)*/
+	.ILM_LENGTH_ADDR          = 0x3F118,	/*0x3F118 ~ 0x3F11A	(3 bytes)*/
+	.DLM_LENGTH_ADDR          = 0x3F130,	/*0x3F130 ~ 0x3F132	(3 bytes)*/
+	.BLD_DES_ADDR             = 0x3F114,	/*0x3F114 ~ 0x3F116	(3 bytes)*/
+	.ILM_DES_ADDR             = 0x3F128,	/*0x3F128 ~ 0x3F12A	(3 bytes)*/
+	.DLM_DES_ADDR             = 0x3F12C,	/*0x3F12C ~ 0x3F12E	(3 bytes)*/
+	.G_ILM_CHECKSUM_ADDR      = 0x3F100,	/*0x3F100 ~ 0x3F103	(4 bytes)*/
+	.G_DLM_CHECKSUM_ADDR      = 0x3F104,	/*0x3F104 ~ 0x3F107	(4 bytes)*/
+	.R_ILM_CHECKSUM_ADDR      = 0x3F120,	/*0x3F120 ~ 0x3F123	(4 bytes)*/
+	.R_DLM_CHECKSUM_ADDR      = 0x3F124,	/*0x3F124 ~ 0x3F127	(4 bytes)*/
 	.BLD_CRC_EN_ADDR          = 0x3F30E,
 	.DMA_CRC_EN_ADDR          = 0x3F136,
 	.BLD_ILM_DLM_CRC_ADDR     = 0x3F133,
@@ -121,16 +121,16 @@ static const struct nvt_ts_mem_map NT36672A_memory_map = {
 	/* Phase 2 Host Download */
 	.BOOT_RDY_ADDR            = 0x3F10D,
 	/* BLD CRC */
-	.BLD_LENGTH_ADDR          = 0x3F10E,	//0x3F10E ~ 0x3F10F	(2 bytes)
-	.ILM_LENGTH_ADDR          = 0x3F118,	//0x3F118 ~ 0x3F119	(2 bytes)
-	.DLM_LENGTH_ADDR          = 0x3F130,	//0x3F130 ~ 0x3F131	(2 bytes)
-	.BLD_DES_ADDR             = 0x3F114,	//0x3F114 ~ 0x3F116	(3 bytes)
-	.ILM_DES_ADDR             = 0x3F128,	//0x3F128 ~ 0x3F12A	(3 bytes)
-	.DLM_DES_ADDR             = 0x3F12C,	//0x3F12C ~ 0x3F12E	(3 bytes)
-	.G_ILM_CHECKSUM_ADDR      = 0x3F100,	//0x3F100 ~ 0x3F103	(4 bytes)
-	.G_DLM_CHECKSUM_ADDR      = 0x3F104,	//0x3F104 ~ 0x3F107	(4 bytes)
-	.R_ILM_CHECKSUM_ADDR      = 0x3F120,	//0x3F120 ~ 0x3F123 (4 bytes)
-	.R_DLM_CHECKSUM_ADDR      = 0x3F124,	//0x3F124 ~ 0x3F127 (4 bytes)
+	.BLD_LENGTH_ADDR          = 0x3F10E,	/*0x3F10E ~ 0x3F10F	(2 bytes)*/
+	.ILM_LENGTH_ADDR          = 0x3F118,	/*0x3F118 ~ 0x3F119	(2 bytes)*/
+	.DLM_LENGTH_ADDR          = 0x3F130,	/*0x3F130 ~ 0x3F131	(2 bytes)*/
+	.BLD_DES_ADDR             = 0x3F114,	/*0x3F114 ~ 0x3F116	(3 bytes)*/
+	.ILM_DES_ADDR             = 0x3F128,	/*0x3F128 ~ 0x3F12A	(3 bytes)*/
+	.DLM_DES_ADDR             = 0x3F12C,	/*0x3F12C ~ 0x3F12E	(3 bytes)*/
+	.G_ILM_CHECKSUM_ADDR      = 0x3F100,	/*0x3F100 ~ 0x3F103	(4 bytes)*/
+	.G_DLM_CHECKSUM_ADDR      = 0x3F104,	/*0x3F104 ~ 0x3F107	(4 bytes)*/
+	.R_ILM_CHECKSUM_ADDR      = 0x3F120,	/*0x3F120 ~ 0x3F123	(4 bytes)*/
+	.R_DLM_CHECKSUM_ADDR      = 0x3F124,	/*0x3F124 ~ 0x3F127	(4 bytes)*/
 	.BLD_CRC_EN_ADDR          = 0x3F30E,
 	.DMA_CRC_EN_ADDR          = 0x3F132,
 	.BLD_ILM_DLM_CRC_ADDR     = 0x3F133,
@@ -229,6 +229,8 @@ struct nvt_ts_trim_id_table {
 };
 
 static const struct nvt_ts_trim_id_table trim_id_table[] = {
+	{.id = {0x0E, 0xFF, 0xFF, 0x72, 0x66, 0x03}, .mask = {1, 0, 0, 1, 1, 1},
+		.mmap = &NT36675_memory_map,  .hwinfo = &NT36675_hw_info},
 	{.id = {0x0C, 0xFF, 0xFF, 0x72, 0x66, 0x03}, .mask = {1, 0, 0, 1, 1, 1},
 		.mmap = &NT36675_memory_map,  .hwinfo = &NT36675_hw_info},
 	{.id = {0xFF, 0xFF, 0xFF, 0x75, 0x66, 0x03}, .mask = {0, 0, 0, 1, 1, 1},

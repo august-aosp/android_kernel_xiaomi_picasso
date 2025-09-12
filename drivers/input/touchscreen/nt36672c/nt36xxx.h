@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 #include <linux/sysfs.h>
 #include <linux/workqueue.h>
+#include <linux/power_supply.h>
 
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -43,6 +44,11 @@
 #include <linux/platform_data/spi-mt65xx.h>
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+#include "../xiaomi/xiaomi_touch.h"
+#endif
+
+
 /*Lock down info size*/
 #define NVT_LOCKDOWN_SIZE			8
 
@@ -51,30 +57,34 @@
 #define PINCTRL_STATE_RELEASE		"pmx_ts_release"
 #define MI_DRM_NOTIFIER
 
-#define NVT_DEBUG 0
+#define NVT_DEBUG 1
 
-//---GPIO number---
+/*---GPIO number---*/
 #define NVTTOUCH_RST_PIN 980
 #define NVTTOUCH_INT_PIN 943
 
 
-//---INT trigger mode---
-//#define IRQ_TYPE_EDGE_RISING 1
-//#define IRQ_TYPE_EDGE_FALLING 2
+/*---INT trigger mode---*/
+/*#define IRQ_TYPE_EDGE_RISING 1*/
+/*#define IRQ_TYPE_EDGE_FALLING 2*/
 #define INT_TRIGGER_TYPE IRQ_TYPE_EDGE_RISING
 
 
-//---SPI driver info.---
+/*---SPI driver info.---*/
 #define NVT_SPI_NAME "NVT-ts-spi"
 
-#define NVT_LOG(fmt, args...) ((void)0)
-#define NVT_ERR(fmt, args...) ((void)0)
+#if NVT_DEBUG
+#define NVT_LOG(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
+#else
+#define NVT_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
+#endif
+#define NVT_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
 
-//---Input device info.---
+/*---Input device info.---*/
 #define NVT_TS_NAME "NVTCapacitiveTouchScreen"
 
 
-//---Touch info.---
+/*---Touch info.---*/
 #define TOUCH_DEFAULT_MAX_WIDTH 1080
 #define TOUCH_DEFAULT_MAX_HEIGHT 2400
 #define TOUCH_MAX_FINGER_NUM 10
@@ -87,7 +97,7 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 /* Enable only when module have tp reset pin and connected to host */
 #define NVT_TOUCH_SUPPORT_HW_RST 1
 
-//---Customerized func.---
+/*---Customerized func.---*/
 #define NVT_TOUCH_PROC 1
 #define NVT_TOUCH_EXT_PROC 1
 #define NVT_TOUCH_MP 1
@@ -108,7 +118,7 @@ extern const uint16_t gesture_key_array[];
 #define DEFAULT_DEBUG_MP_NAME "novatek_debug_mp.bin"
 
 
-//---ESD Protect.---
+/*---ESD Protect.---*/
 #define NVT_TOUCH_ESD_PROTECT 1
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
 #define NVT_TOUCH_WDT_RECOVERY 1
@@ -136,11 +146,15 @@ struct nvt_ts_data {
 	struct spi_device *client;
 	struct platform_device *pdev;
 	struct input_dev *input_dev;
-	struct delayed_work nvt_fwu_work;
-	struct delayed_work nvt_lockdown_work;
+	struct work_struct nvt_fwu_work;
+	struct work_struct nvt_lockdown_work;
 	struct work_struct switch_mode_work;
-	struct work_struct resist_rf_work;
-	struct timer_list rf_timer;
+
+	struct mutex power_supply_lock;
+	struct work_struct power_supply_work;
+	struct notifier_block power_supply_notifier;
+	int is_usb_exist;
+
 	uint16_t addr;
 	int8_t phys[32];
 
@@ -188,6 +202,7 @@ struct nvt_ts_data {
 #endif
 	int db_wakeup;
 	bool lkdown_readed;
+	bool boot_firmware_updated;
 	u8 lockdown_info[NVT_LOCKDOWN_SIZE];
 	uint32_t config_array_size;
 	struct nvt_config_info *config_array;
@@ -212,7 +227,6 @@ struct nvt_ts_data {
 	struct completion dev_pm_suspend_completion;
 	bool palm_sensor_changed;
 	bool palm_sensor_switch;
-	bool rf_resist_cmd_waiting;
 	uint8_t debug_flag;
 };
 
@@ -223,23 +237,22 @@ struct nvt_flash_data{
 #endif
 
 typedef enum {
-	RESET_STATE_INIT = 0xA0,// IC reset
-	RESET_STATE_REK,		// ReK baseline
-	RESET_STATE_REK_FINISH,	// baseline is ready
-	RESET_STATE_NORMAL_RUN,	// normal run
+	RESET_STATE_INIT = 0xA0,/* IC reset */
+	RESET_STATE_REK,		/* ReK baseline */
+	RESET_STATE_REK_FINISH,	/* baseline is ready */
+	RESET_STATE_NORMAL_RUN,	/* normal run */
 	RESET_STATE_MAX  = 0xAF
 } RST_COMPLETE_STATE;
 
 typedef enum {
     EVENT_MAP_HOST_CMD                      = 0x50,
     EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE   = 0x51,
-    EVENT_MAP_RF_RESIST_ADDR                = 0x5D,
     EVENT_MAP_RESET_COMPLETE                = 0x60,
     EVENT_MAP_FWINFO                        = 0x78,
     EVENT_MAP_PROJECTID                     = 0x9A,
 } SPI_EVENT_MAP;
 
-//---SPI READ/WRITE---
+/*---SPI READ/WRITE---*/
 #define SPI_WRITE_MASK(a)	(a | 0x80)
 #define SPI_READ_MASK(a)	(a & 0x7F)
 
@@ -251,10 +264,10 @@ typedef enum {
 	NVTREAD  = 1
 } NVT_SPI_RW;
 
-//---extern structures---
+/*---extern structures---*/
 extern struct nvt_ts_data *ts;
 
-//---extern functions---
+/*---extern functions---*/
 
 int32_t CTP_SPI_READ(struct spi_device *client, uint8_t *buf, uint16_t len);
 int32_t CTP_SPI_WRITE(struct spi_device *client, uint8_t *buf, uint16_t len);

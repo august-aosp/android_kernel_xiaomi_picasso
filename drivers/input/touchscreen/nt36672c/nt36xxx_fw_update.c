@@ -97,7 +97,7 @@ return:
 static int32_t nvt_download_init(void)
 {
 	/* allocate buffer for transfer firmware */
-	//NVT_LOG("NVT_TRANSFER_LEN = 0x%06X\n", NVT_TRANSFER_LEN);
+	/*NVT_LOG("NVT_TRANSFER_LEN = 0x%06X\n", NVT_TRANSFER_LEN);*/
 
 	if (fwbuf == NULL) {
 		fwbuf = (uint8_t *)kzalloc((NVT_TRANSFER_LEN+1), GFP_KERNEL);
@@ -157,7 +157,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 
 	/* Find the header size */
 	end = fwdata[0] + (fwdata[1] << 8) + (fwdata[2] << 16) + (fwdata[3] << 24);
-	pos = 0x30;	// info section start at 0x30 offset
+	pos = 0x30;	/* info section start at 0x30 offset*/
 	while (pos < end) {
 		info_sec_num ++;
 		pos += 0x10;	/* each header info is 16 bytes */
@@ -198,7 +198,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 			bin_map[list].size = byte_to_word(&fwdata[8 + list*12]);
 			if (ts->hw_crc)
 				bin_map[list].crc = byte_to_word(&fwdata[0x18 + list*4]);
-			else { //ts->hw_crc
+			else { /*ts->hw_crc */
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
@@ -206,7 +206,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
-			} //ts->hw_crc
+			} /*ts->hw_crc*/
 			if (list == 0)
 				sprintf(bin_map[list].name, "ILM");
 			else if (list == 1)
@@ -226,7 +226,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 			bin_map[list].BIN_addr = byte_to_word(&fwdata[pos+8]);
 			if (ts->hw_crc)
 				bin_map[list].crc = byte_to_word(&fwdata[pos+12]);
-			else { //ts->hw_crc
+			else { /*ts->hw_crc*/
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
@@ -234,7 +234,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
-			} //ts->hw_crc
+			} /*ts->hw_crc*/
 			/* detect header end to protect parser function */
 			if ((bin_map[list].BIN_addr == 0) && (bin_map[list].size != 0)) {
 				sprintf(bin_map[list].name, "Header");
@@ -256,7 +256,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 			bin_map[list].BIN_addr = byte_to_word(&fwdata[pos+8]);
 			if (ts->hw_crc)
 				bin_map[list].crc = byte_to_word(&fwdata[pos+12]);
-			else { //ts->hw_crc
+			else { /*ts->hw_crc*/
 				if ((bin_map[list].BIN_addr + bin_map[list].size) < fwsize)
 					bin_map[list].crc = CheckSum(&fwdata[bin_map[list].BIN_addr], bin_map[list].size);
 				else {
@@ -264,7 +264,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 							bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 					return -EINVAL;
 				}
-			} //ts->hw_crc
+			} /*ts->hw_crc*/
 			sprintf(bin_map[list].name, "Overlay-%d", (list- ilm_dlm_num - info_sec_num));
 		}
 
@@ -274,10 +274,11 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 					bin_map[list].BIN_addr, bin_map[list].BIN_addr + bin_map[list].size);
 			return -EINVAL;
 		}
-
-//		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X), CRC (0x%08X)\n",
-//				list, bin_map[list].name,
-//				bin_map[list].SRAM_addr, bin_map[list].size,  bin_map[list].BIN_addr, bin_map[list].crc);
+		/*
+		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X), CRC (0x%08X)\n",
+			list, bin_map[list].name,
+			bin_map[list].SRAM_addr, bin_map[list].size,  bin_map[list].BIN_addr, bin_map[list].crc);
+		*/
 	}
 
 	return 0;
@@ -324,14 +325,14 @@ static int32_t update_firmware_request(const char *filename)
 			goto request_fail;
 		}
 
-		// check FW need to write size
+		/* check FW need to write size */
 		if (nvt_get_fw_need_write_size(fw_entry)) {
 			NVT_ERR("get fw need to write size fail!\n");
 			ret = -EINVAL;
 			goto invalid;
 		}
 
-		// check if FW version add FW version bar equals 0xFF
+		/* check if FW version add FW version bar equals 0xFF */
 		if (*(fw_entry->data + FW_BIN_VER_OFFSET) + *(fw_entry->data + FW_BIN_VER_BAR_OFFSET) != 0xFF) {
 			NVT_ERR("bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
 			NVT_ERR("FW_VER=0x%02X, FW_VER_BAR=0x%02X\n", *(fw_entry->data+FW_BIN_VER_OFFSET), *(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
@@ -403,10 +404,10 @@ static int32_t nvt_read_ram_and_save_file(uint32_t addr, uint16_t len, char *nam
 	}
 
 	/* SPI read */
-	//---set xdata index to addr---
+	/*---set xdata index to addr---*/
 	nvt_set_page(addr);
 
-	fbufp[0] = addr & 0x7F;	//offset
+	fbufp[0] = addr & 0x7F;	/*offset*/
 	CTP_SPI_READ(ts->client, fbufp, len+1);
 
 	/* Write to file */
@@ -536,16 +537,16 @@ static int32_t nvt_write_sram(const u8 *fwdata,
 	for (i = 0 ; i < count ; i++) {
 		len = (size < NVT_TRANSFER_LEN) ? size : NVT_TRANSFER_LEN;
 
-		//---set xdata index to start address of SRAM---
+		/*---set xdata index to start address of SRAM---*/
 		ret = nvt_set_page(SRAM_addr);
 		if (ret) {
 			NVT_ERR("set page failed, ret = %d\n", ret);
 			return ret;
 		}
 
-		//---write data into SRAM---
-		fwbuf[0] = SRAM_addr & 0x7F;	//offset
-		memcpy(fwbuf+1, &fwdata[BIN_addr], len);	//payload
+		/*---write data into SRAM---*/
+		fwbuf[0] = SRAM_addr & 0x7F;	/*offset*/
+		memcpy(fwbuf+1, &fwdata[BIN_addr], len);	/*payload*/
 		ret = CTP_SPI_WRITE(ts->client, fwbuf, len+1);
 		if (ret) {
 			NVT_ERR("write to sram failed, ret = %d\n", ret);
@@ -583,10 +584,10 @@ static int32_t nvt_write_firmware(const u8 *fwdata, size_t fwsize)
 		size = bin_map[list].size;
 		BIN_addr = bin_map[list].BIN_addr;
 		name = bin_map[list].name;
-
-//		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X)\n",
-//				list, name, SRAM_addr, size, BIN_addr);
-
+		/*
+		NVT_LOG("[%d][%s] SRAM (0x%08X), SIZE (0x%08X), BIN (0x%08X)\n",
+				list, name, SRAM_addr, size, BIN_addr);
+		*/
 		/* Check data size */
 		if ((BIN_addr + size) > fwsize) {
 			NVT_ERR("access range (0x%08X to 0x%08X) is larger than bin size!\n",
@@ -630,7 +631,7 @@ static int32_t nvt_check_fw_checksum(void)
 
 	memset(fwbuf, 0, (len+1));
 
-	//---set xdata index to checksum---
+	/*---set xdata index to checksum---*/
 	nvt_set_page(ts->mmap->R_ILM_CHECKSUM_ADDR);
 
 	/* read checksum */
@@ -684,7 +685,7 @@ static void nvt_set_bld_crc_bank(uint32_t DES_ADDR, uint32_t SRAM_ADDR,
 	CTP_SPI_WRITE(ts->client, fwbuf, 4);
 
 	/* write length */
-	//nvt_set_page(LENGTH_ADDR);
+	/*nvt_set_page(LENGTH_ADDR);*/
 	fwbuf[0] = LENGTH_ADDR & 0x7F;
 	fwbuf[1] = (size) & 0xFF;
 	fwbuf[2] = (size >> 8) & 0xFF;
@@ -696,7 +697,7 @@ static void nvt_set_bld_crc_bank(uint32_t DES_ADDR, uint32_t SRAM_ADDR,
 	}
 
 	/* write golden dlm checksum */
-	//nvt_set_page(G_CHECKSUM_ADDR);
+	/*nvt_set_page(G_CHECKSUM_ADDR);*/
 	fwbuf[0] = G_CHECKSUM_ADDR & 0x7F;
 	fwbuf[1] = (crc) & 0xFF;
 	fwbuf[2] = (crc >> 8) & 0xFF;
@@ -829,25 +830,25 @@ static int nvt_f2c_disp_off(void)
 
 	NVT_LOG("++\n");
 
-	// SW Reset & Idle
+	/* SW Reset & Idle*/
 	nvt_sw_reset_idle();
 
-	//Setp1: Set REG CPU_IF_ADDR[15:0]
+	/*Setp1: Set REG CPU_IF_ADDR[15:0]*/
 	nvt_write_addr(ts->mmap->CPU_IF_ADDR_LOW, DISP_OFF_ADDR & 0xFF);
 	nvt_write_addr(ts->mmap->CPU_IF_ADDR_HIGH, (DISP_OFF_ADDR >> 8) & 0xFF);
 
-	//Step2: Set REG FFM_ADDR[15:0]
-	// set FFM_ADDR to 0x20000
+	/*Step2: Set REG FFM_ADDR[15:0]*/
+	/* set FFM_ADDR to 0x20000*/
 	nvt_write_addr(ts->mmap->FFM_ADDR_LOW, 0x00);
 	nvt_write_addr(ts->mmap->FFM_ADDR_MID, 0x00);
 	if (ts->hw_crc > 1)
 		nvt_write_addr(ts->mmap->FFM_ADDR_HIGH, 0x00);
 
-	//Step3: Set REG F2C_LENGT[H7:0]
+	/*Step3: Set REG F2C_LENGT[H7:0]*/
 	nvt_write_addr(ts->mmap->F2C_LENGTH, 1);
 
 nvt_write_disp_off_retry:
-	//Step4: Set REG CPU_Polling_En=1, F2C_RW=1, CPU_IF_ADDR_INC=1, F2C_EN=1
+	/*Step4: Set REG CPU_Polling_En=1, F2C_RW=1, CPU_IF_ADDR_INC=1, F2C_EN=1*/
 	nvt_set_page(ts->mmap->FFM2CPU_CTL);
 	buf[0] = ts->mmap->FFM2CPU_CTL & 0x7F;
 	buf[1] = 0xFF;
@@ -859,7 +860,7 @@ nvt_write_disp_off_retry:
 	tmp_val = buf[1] | 0x27;
 	nvt_write_addr(ts->mmap->FFM2CPU_CTL, tmp_val);
 
-	//Step5: wait F2C_EN = 0
+	/*Step5: wait F2C_EN = 0*/
 	retry = 0;
 	while (1) {
 		nvt_set_page(ts->mmap->FFM2CPU_CTL);
@@ -884,7 +885,7 @@ nvt_write_disp_off_retry:
 		}
 	}
 
-	//Step6: Check REG TH_CPU_CHK  status (1: Success,  0: Fail), if 0, can Retry Step4.
+	/*Step6: Check REG TH_CPU_CHK  status (1: Success,  0: Fail), if 0, can Retry Step4.*/
 	if (((buf[2] & 0x04) >> 2) != 0x01) {
 		write_disp_off_retry++;
 		if (write_disp_off_retry <= 3) {
@@ -996,12 +997,12 @@ static int32_t nvt_download_firmware(void)
 		 */
 #if NVT_TOUCH_SUPPORT_HW_RST
 		gpio_set_value(ts->reset_gpio, 0);
-		mdelay(1);	//wait 1ms
+		mdelay(1);	/*wait 1ms*/
 #endif
 		nvt_eng_reset();
 #if NVT_TOUCH_SUPPORT_HW_RST
 		gpio_set_value(ts->reset_gpio, 1);
-		mdelay(10);	//wait tRT2BRST after TP_RST
+		mdelay(10);	/*wait tRT2BRST after TP_RST*/
 #endif
 		nvt_bootloader_reset();
 
@@ -1064,7 +1065,7 @@ int32_t nvt_update_firmware(const char *firmware_name)
 {
 	int32_t ret = 0;
 
-	// request bin file in "/etc/firmware"
+	/* request bin file in "/etc/firmware" */
 	ret = update_firmware_request(firmware_name);
 	if (ret) {
 		NVT_ERR("update_firmware_request failed. (%d)\n", ret);
@@ -1119,17 +1120,23 @@ return:
 *******************************************************/
 void Boot_Update_Firmware(struct work_struct *work)
 {
+	int ret;
+
 	nvt_match_fw();
 	mutex_lock(&ts->lock);
 	if (nvt_get_dbgfw_status()) {
-		if (nvt_update_firmware(DEFAULT_DEBUG_FW_NAME) < 0) {
+		ret = nvt_update_firmware(DEFAULT_DEBUG_FW_NAME);
+		if (ret < 0) {
 			NVT_ERR("use built-in fw");
-			nvt_update_firmware(ts->fw_name);
+			ret = nvt_update_firmware(ts->fw_name);
 		}
 	} else {
-		nvt_update_firmware(ts->fw_name);
+		ret = nvt_update_firmware(ts->fw_name);
 	}
 	nvt_get_fw_info();
+	if (!ret) {
+		ts->boot_firmware_updated = true;
+	}
 	mutex_unlock(&ts->lock);
 }
 #endif /* BOOT_UPDATE_FIRMWARE */
