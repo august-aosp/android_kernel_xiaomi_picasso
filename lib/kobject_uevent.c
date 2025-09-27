@@ -3,7 +3,6 @@
  * kernel userspace event delivery
  *
  * Copyright (C) 2004 Red Hat, Inc.  All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  * Copyright (C) 2004 Novell, Inc.  All rights reserved.
  * Copyright (C) 2004 IBM, Inc. All rights reserved.
  *
@@ -29,6 +28,7 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 #include <net/net_namespace.h>
+
 
 u64 uevent_seqnum;
 #ifdef CONFIG_UEVENT_HELPER
@@ -781,7 +781,6 @@ static int uevent_net_init(struct net *net)
 		list_add_tail(&ue_sk->list, &uevent_sock_list);
 		mutex_unlock(&uevent_sock_mutex);
 	}
-
 
 	return 0;
 }
