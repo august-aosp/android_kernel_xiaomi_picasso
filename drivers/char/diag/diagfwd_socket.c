@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/slab.h>
@@ -637,7 +636,8 @@ static void socket_read_work_fn(struct work_struct *work)
 		return;
 	}
 	fwd_info = info->fwd_ctxt;
-	if ((!fwd_info || !atomic_read(&fwd_info->opened)) && info->port_type == PORT_TYPE_SERVER)
+	if (info->port_type == PORT_TYPE_SERVER &&
+		(!fwd_info || !atomic_read(&fwd_info->opened)))
 		diag_socket_drop_data(info);
 
 	if (!atomic_read(&info->opened) && info->port_type == PORT_TYPE_SERVER)
