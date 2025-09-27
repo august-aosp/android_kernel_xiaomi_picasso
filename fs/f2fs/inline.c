@@ -2,7 +2,6 @@
 /*
  * fs/f2fs/inline.c
  * Copyright (c) 2013, Intel Corporation
- * Copyright (C) 2021 XiaoMi, Inc.
  * Authors: Huajun Li <huajun.li@intel.com>
  *          Haicheng Li <haicheng.li@intel.com>
  */
