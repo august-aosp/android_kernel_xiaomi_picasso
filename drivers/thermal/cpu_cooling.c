@@ -157,6 +157,7 @@ static int cpufreq_thermal_notifier(struct notifier_block *nb,
 		if (clipped_freq > cpufreq_cdev->clipped_freq)
 			clipped_freq = cpufreq_cdev->clipped_freq;
 	}
+
 	mutex_unlock(&cooling_list_lock);
 
 	return NOTIFY_OK;
