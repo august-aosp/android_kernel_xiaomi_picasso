@@ -8,7 +8,6 @@
  * interface.
  *
  * Copyright (C) 2010 IBM Corperation
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Author: John Stultz <john.stultz@linaro.org>
  *
@@ -167,6 +166,7 @@ static void alarmtimer_enqueue(struct alarm_base *base, struct alarm *alarm)
 {
 	if (alarm->state & ALARMTIMER_STATE_ENQUEUED)
 		timerqueue_del(&base->timerqueue, &alarm->node);
+
 	timerqueue_add(&base->timerqueue, &alarm->node);
 	alarm->state |= ALARMTIMER_STATE_ENQUEUED;
 }
@@ -223,7 +223,6 @@ static enum hrtimer_restart alarmtimer_fired(struct hrtimer *timer)
 	spin_unlock_irqrestore(&base->lock, flags);
 
 	trace_alarmtimer_fired(alarm, base->gettime());
-
 	return ret;
 
 }
@@ -859,7 +858,6 @@ static struct platform_driver alarmtimer_driver = {
 	}
 };
 
-
 /**
  * alarmtimer_init - Initialize alarm timer code
  *
@@ -897,7 +895,6 @@ static int __init alarmtimer_init(void)
 		error = PTR_ERR(pdev);
 		goto out_drv;
 	}
-
 	return 0;
 
 out_drv:
