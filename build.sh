@@ -14,15 +14,19 @@
 
 source .env.sh
 
-ARCH=arm64;
-CC=clang;
-LD=ld.lld
-CLANG_TRIPLE=aarch64-linux-gnu-;
-CROSS_COMPILE=aarch64-linux-gnu-;
-CROSS_COMPILE_COMPAT=arm-linux-gnueabi-;
 THREAD=$(nproc --all);
-CC_ADDITION_FLAGS="LD=$LD";
 OUT="../out";
+
+build_args="CC=clang \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            LD=ld.lld \
+            O=$OUT \
+            -j$THREAD";
 
 TARGET_KERNEL_FILE=arch/arm64/boot/Image;
 TARGET_KERNEL_DTB=arch/arm64/boot/dtb;
@@ -111,7 +115,7 @@ make_defconfig(){
         DEFCONFIG_NAME="$DEFCONFIG_NAME $DEBUG_FRAGMENT"
     fi
 
-    make CC=$CC ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CROSS_COMPILE_COMPAT=$CROSS_COMPILE_COMPAT CLANG_TRIPLE=$CLANG_TRIPLE LLVM=1 LLVM_IAS=1 $CC_ADDITION_FLAGS O=$OUT -j$THREAD $DEFCONFIG_NAME;
+    make $build_args $DEFCONFIG_NAME;
 }
 
 build_kernel(){
@@ -119,7 +123,7 @@ build_kernel(){
     echo " Building Kernel ...........";
     echo "------------------------------";
 
-    make CC=$CC ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CROSS_COMPILE_COMPAT=$CROSS_COMPILE_COMPAT CLANG_TRIPLE=$CLANG_TRIPLE LLVM=1 LLVM_IAS=1 $CC_ADDITION_FLAGS O=$OUT -j$THREAD;
+    make $build_args;
     END_SEC=$(date +%s);
     COST_SEC=$[ $END_SEC-$START_SEC ];
     echo "Kernel Build Costed $(($COST_SEC/60))min $(($COST_SEC%60))s"
@@ -169,7 +173,7 @@ save_defconfig(){
     echo " Saving kernel config ........";
     echo "------------------------------";
 
-    make CC=$CC ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CROSS_COMPILE_COMPAT=$CROSS_COMPILE_COMPAT CLANG_TRIPLE=$CLANG_TRIPLE LLVM=1 LLVM_IAS=1 $CC_ADDITION_FLAGS O=$OUT -j$THREAD $DEFCONFIG_NAME;
+    make $build_args $DEFCONFIG_NAME;
     END_SEC=$(date +%s);
     COST_SEC=$[ $END_SEC-$START_SEC ];
     echo "Finished. Kernel config saved to $OUT/.config"
