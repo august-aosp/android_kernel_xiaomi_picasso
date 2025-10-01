@@ -26,7 +26,9 @@ build_args="CC=clang \
             LLVM_IAS=1 \
             LD=ld.lld \
             O=$OUT \
-            -j$THREAD";
+            -j$THREAD \
+            KBUILD_BUILD_USER=$BUILD_USER \
+            KBUILD_BUILD_HOST=$BUILD_HOST";
 
 TARGET_KERNEL_FILE=arch/arm64/boot/Image;
 TARGET_KERNEL_DTB=arch/arm64/boot/dtb;
