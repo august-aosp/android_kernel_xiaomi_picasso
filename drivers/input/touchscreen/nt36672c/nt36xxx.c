@@ -28,12 +28,16 @@
 #include <linux/input/mt.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
-#include <linux/debugfs.h>
 #include <linux/spi-xiaomi-tp.h>
 #include <drm/drm_notifier_mi.h>
 
 #include <linux/notifier.h>
 #include <linux/fb.h>
+
+#ifdef CONFIG_TOUCHSCREEN_NVT_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 #endif
