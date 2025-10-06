@@ -4864,6 +4864,10 @@ CONFIG_RMNET_SHS=y
 # CONFIG_KSU is not set
 
 #
+# KernelSU - SUSFS
+#
+
+#
 # File systems
 #
 CONFIG_DCACHE_WORD_ACCESS=y
