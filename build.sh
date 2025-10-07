@@ -12,23 +12,12 @@
 #  Configure your .env before using this script.
 #
 
+#####################################
+###### Setup build environment ######
+#####################################
 source .env.sh
 
 THREAD=$(nproc --all);
-OUT="../out";
-
-build_args="CC=clang \
-            ARCH=arm64 \
-            CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
-            LLVM=1 \
-            LLVM_IAS=1 \
-            LD=ld.lld \
-            O=$OUT \
-            -j$THREAD \
-            KBUILD_BUILD_USER=$BUILD_USER \
-            KBUILD_BUILD_HOST=$BUILD_HOST";
 
 TARGET_KERNEL_FILE=arch/arm64/boot/Image;
 TARGET_KERNEL_DTB=arch/arm64/boot/dtb;
@@ -36,8 +25,6 @@ TARGET_KERNEL_DTBO=arch/arm64/boot/dtbo.img
 
 DEFCONFIG_PATH=arch/arm64/configs
 DEFCONFIG_NAME="vendor/${DEVICE}_user_defconfig";
-KSU_FRAGMENT=vendor/kernelsu.config;
-DEBUG_FRAGMENT=vendor/debug.config;
 
 START_SEC=$(date +%s);
 
@@ -45,12 +32,17 @@ TARGET_KERNEL_NAME=$(cat $DEFCONFIG_PATH/$DEFCONFIG_NAME | grep CONFIG_LOCALVERS
 TARGET_KERNEL_VERSION=$(make kernelversion);
 
 GIT_COMMIT=$(git rev-parse --short HEAD);
-TARGET_PACKAGED_KERNEL_NAME=$TARGET_KERNEL_NAME-$TARGET_KERNEL_VERSION-$GIT_COMMIT;
 
 ANYKERNEL_PATH=AnyKernel3;
 
-KERNELSU=0
-DEBUG=0
+# Define build variants and their corresponding fragments
+declare -A BUILD_VARIANTS_MAP=(
+    ["vanilla"]=""
+    ["susfs"]="vendor/kernelsu.config"
+    ["debug"]="vendor/debug.config"
+)
+
+BUILD_VARIANT="vanilla"
 BUILD_OPT=""
 
 usage(){
@@ -67,21 +59,23 @@ usage(){
     echo "    version         Display the version number."
     echo
     echo "Optional argument"
-    echo "    --ksu           Build with Kernel SU (with \"all\" and \"defconfig\" operation)."
-    echo "    --debug         Enable configs for debug purpose."
+    echo "    --variant|-v    Specify the build variant (e.g., vanilla, susfs, debug)."
+    echo "    --help|-h       Display this help message."
     echo
 }
 
 parse_args(){
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --ksu)
-            KERNELSU=1
-            shift
-            ;;
-            --debug)
-            DEBUG=1
-            shift
+            -v|--variant)
+            if [[ -n "${BUILD_VARIANTS_MAP[$2]}" || "$2" == "vanilla" ]]; then
+                BUILD_VARIANT="$2"
+                shift 2
+            else
+                echo "Unknown build variant: $2"
+                echo "Supported variants: ${!BUILD_VARIANTS_MAP[*]}"
+                exit 1
+            fi
             ;;
             --help|-h)
             usage
@@ -100,6 +94,27 @@ parse_args(){
     done
 }
 
+parse_args "$@";
+
+OUT="../out/$DEVICE/$BUILD_VARIANT"
+build_args="CC=clang \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            LD=ld.lld \
+            O=$OUT \
+            -j$THREAD \
+            KBUILD_BUILD_USER=$BUILD_USER \
+            KBUILD_BUILD_HOST=$BUILD_HOST";
+
+TARGET_PACKAGED_KERNEL_NAME=$TARGET_KERNEL_NAME-$TARGET_KERNEL_VERSION-$BUILD_VARIANT-$GIT_COMMIT;
+
+#####################################
+########## Build functions ##########
+#####################################
 link_all_dtb_files(){
     find $OUT/arch/arm64/boot/dts/vendor/qcom -name '*.dtb' -exec cat {} + > $OUT/arch/arm64/boot/dtb;
 }
@@ -109,12 +124,9 @@ make_defconfig(){
     echo " Building Kernel Defconfig..";
     echo "------------------------------";
 
-    if [ $KERNELSU == 1 ]; then
-        DEFCONFIG_NAME="$DEFCONFIG_NAME $KSU_FRAGMENT"
-    fi
-
-    if [ $DEBUG == 1 ]; then
-        DEFCONFIG_NAME="$DEFCONFIG_NAME $DEBUG_FRAGMENT"
+    FRAGMENT="${BUILD_VARIANTS_MAP[$BUILD_VARIANT]}"
+    if [[ -n "$FRAGMENT" ]]; then
+        DEFCONFIG_NAME="$DEFCONFIG_NAME $FRAGMENT"
     fi
 
     make $build_args $DEFCONFIG_NAME;
@@ -229,5 +241,4 @@ main(){
     fi
 }
 
-parse_args "$@";
 main;
