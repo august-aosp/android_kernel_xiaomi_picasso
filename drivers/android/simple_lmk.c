@@ -220,20 +220,7 @@ static void scan_and_kill(void)
 
 	/* Minimize the number of victims if we found more pages than needed */
 	if (pages_found > MIN_FREE_PAGES) {
-		/* First round of processing to weed out unneeded victims */
 		nr_to_kill = process_victims(nr_found);
-
-		/*
-		 * Try to kill as few of the chosen victims as possible by
-		 * sorting the chosen victims by size, which means larger
-		 * victims that have a lower adj can be killed in place of
-		 * smaller victims with a high adj.
-		 */
-		sort(victims, nr_to_kill, sizeof(*victims), victim_cmp,
-		     victim_swap);
-
-		/* Second round of processing to finally select the victims */
-		nr_to_kill = process_victims(nr_to_kill);
 	} else {
 		/* Too few pages found, so all the victims need to be killed */
 		nr_to_kill = nr_found;
