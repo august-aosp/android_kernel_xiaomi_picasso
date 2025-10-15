@@ -132,15 +132,11 @@ static int sixty = 60;
 #include <linux/sched/bore.h>
 
 extern u8   __read_mostly sched_bore;
-extern u8   __read_mostly sched_burst_exclude_kthreads;
+extern u8   __read_mostly sched_burst_inherit_type;
 extern u8   __read_mostly sched_burst_smoothness;
-extern u8   __read_mostly sched_burst_fork_atavistic;
-extern u8   __read_mostly sched_burst_parity_threshold;
 extern u8   __read_mostly sched_burst_penalty_offset;
 extern uint __read_mostly sched_burst_penalty_scale;
-extern uint __read_mostly sched_burst_cache_stop_count;
 extern uint __read_mostly sched_burst_cache_lifetime;
-extern uint __read_mostly sched_deadline_boost_mask;
 
 static int __maybe_unused maxval_6_bits  =   63;
 static int __maybe_unused maxval_8_bits  =  255;
@@ -1639,13 +1635,13 @@ static struct ctl_table kern_table[] = {
 		.extra2		= &one,
 	},
 	{
-		.procname	= "sched_burst_exclude_kthreads",
-		.data		= &sched_burst_exclude_kthreads,
+		.procname	= "sched_burst_inherit_type",
+		.data		= &sched_burst_inherit_type,
 		.maxlen		= sizeof(u8),
 		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
+		.proc_handler = sched_burst_inherit_type_update_handler,
 		.extra1		= &zero,
-		.extra2		= &one,
+		.extra2		= &two,
 	},
 	{
 		.procname	= "sched_burst_smoothness",
@@ -1653,26 +1649,8 @@ static struct ctl_table kern_table[] = {
 		.maxlen		= sizeof(u8),
 		.mode		= 0644,
 		.proc_handler = proc_dou8vec_minmax,
-		.extra1		= &one,
-		.extra2		= &maxval_8_bits,
-	},
-	{
-		.procname	= "sched_burst_fork_atavistic",
-		.data		= &sched_burst_fork_atavistic,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
 		.extra1		= &zero,
 		.extra2		= &three,
-	},
-	{
-		.procname	= "sched_burst_parity_threshold",
-		.data		= &sched_burst_parity_threshold,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
-		.extra1		= &zero,
-		.extra2		= &maxval_8_bits,
 	},
 	{
 		.procname	= "sched_burst_penalty_offset",
@@ -1693,22 +1671,8 @@ static struct ctl_table kern_table[] = {
 		.extra2		= &maxval_12_bits,
 	},
 	{
-		.procname	= "sched_burst_cache_stop_count",
-		.data		= &sched_burst_cache_stop_count,
-		.maxlen		= sizeof(uint),
-		.mode		= 0644,
-		.proc_handler = proc_douintvec,
-	},
-	{
 		.procname	= "sched_burst_cache_lifetime",
 		.data		= &sched_burst_cache_lifetime,
-		.maxlen		= sizeof(uint),
-		.mode		= 0644,
-		.proc_handler = proc_douintvec,
-	},
-	{
-		.procname	= "sched_deadline_boost_mask",
-		.data		= &sched_deadline_boost_mask,
 		.maxlen		= sizeof(uint),
 		.mode		= 0644,
 		.proc_handler = proc_douintvec,

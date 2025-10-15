@@ -332,7 +332,7 @@ print_task(struct seq_file *m, struct rq *rq, struct task_struct *p)
 		SPLIT_NS(schedstat_val_or_zero(p->se.statistics.sum_sleep_runtime)));
 
 #ifdef CONFIG_SCHED_BORE
-	SEQ_printf(m, " %2d", p->se.burst_score);
+	SEQ_printf(m, " %2d", p->bore.score);
 #endif // CONFIG_SCHED_BORE
 #ifdef CONFIG_NUMA_BALANCING
 	SEQ_printf(m, " %d %d", task_node(p), task_numa_group_id(p));
@@ -841,7 +841,7 @@ void proc_sched_show_task(struct task_struct *p, struct pid_namespace *ns,
 	P(se.load.weight);
 #ifdef CONFIG_SMP
 #ifdef CONFIG_SCHED_BORE
-	P(se.burst_score);
+	P(bore.score);
 #endif // CONFIG_SCHED_BORE
 	P(se.avg.load_sum);
 	P(se.avg.runnable_sum);
