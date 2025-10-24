@@ -65,7 +65,9 @@ static inline struct page *ion_page_pool_alloc_pages(struct ion_page_pool *pool)
 	if (page) {
 		mod_node_page_state(page_pgdat(page), NR_ION_HEAP,
 				    1 << pool->order);
+#ifdef CONFIG_MM_EVENT_STAT
 		mm_event_count(MM_KERN_ALLOC, 1 << pool->order);
+#endif
 	}
 	return page;
 }
