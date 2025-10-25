@@ -3176,6 +3176,13 @@ static int32_t nvt_ts_resume(struct device *dev)
 		NVT_LOG("resend rf resist cmd\n");
 		mod_timer(&ts->rf_timer, jiffies + msecs_to_jiffies(80));
 	}
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+	else {
+		nvt_set_cur_value(Touch_Resist_RF, 1);
+		// wait 150ms for firmware ready
+		mod_timer(&ts->rf_timer, jiffies + msecs_to_jiffies(150));
+	}
+#endif
 Exit:
 	if (ts->dev_pm_suspend)
 		pm_relax(dev);
