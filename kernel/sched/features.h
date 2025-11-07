@@ -138,3 +138,8 @@
  * Request max frequency from schedutil whenever a RT task is running.
  */
 #define SCHED_FEAT_SUGOV_RT_MAX_FREQ 0
+
+/*
+ * Do newidle balancing proportional to its success rate using randomization.
+ */
+#define SCHED_FEAT_NI_RANDOM 1
