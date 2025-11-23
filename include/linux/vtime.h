@@ -22,12 +22,12 @@ static inline bool vtime_accounting_cpu_enabled(void) { return true; }
  * For now vtime state is tied to context tracking. We might want to decouple
  * those later if necessary.
  */
-static inline bool vtime_accounting_enabled(void)
+static __always_inline bool vtime_accounting_enabled(void)
 {
 	return context_tracking_is_enabled();
 }
 
-static inline bool vtime_accounting_cpu_enabled(void)
+static __always_inline bool vtime_accounting_cpu_enabled(void)
 {
 	if (vtime_accounting_enabled()) {
 		if (context_tracking_cpu_is_enabled())

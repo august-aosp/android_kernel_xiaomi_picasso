@@ -1168,6 +1168,41 @@ static inline u32 sched_rng(void)
 struct sched_group;
 #ifdef CONFIG_SCHED_CORE
 static inline struct cpumask *sched_group_span(struct sched_group *sg);
+
+DECLARE_STATIC_KEY_FALSE(__sched_core_enabled);
+
+static __always_inline bool sched_core_enabled(struct rq *rq)
+{
+	return static_branch_unlikely(&__sched_core_enabled) && rq->core_enabled;
+}
+
+static __always_inline bool sched_core_disabled(void)
+{
+	return !static_branch_unlikely(&__sched_core_enabled);
+}
+
+/*
+ * Be careful with this function; not for general use. The return value isn't
+ * stable unless you actually hold a relevant rq->__lock.
+ */
+static __always_inline raw_spinlock_t *rq_lockp(struct rq *rq)
+{
+	if (sched_core_enabled(rq))
+		return &rq->core->__lock;
+
+	return &rq->__lock;
+}
+
+static __always_inline raw_spinlock_t *__rq_lockp(struct rq *rq)
+{
+	if (rq->core_enabled)
+		return &rq->core->__lock;
+
+	return &rq->__lock;
+}
+
+bool cfs_prio_less(struct task_struct *a, struct task_struct *b, bool fi);
+
 /*
  * Helpers to check if the CPU's core cookie matches with the task's cookie
  * when core scheduling is enabled.
@@ -1223,6 +1258,27 @@ static inline bool sched_group_cookie_match(struct rq *rq,
 	return false;
 }
 #else /* !CONFIG_SCHED_CORE */
+
+static inline bool sched_core_enabled(struct rq *rq)
+{
+	return false;
+}
+
+static inline bool sched_core_disabled(void)
+{
+	return true;
+}
+
+static __always_inline raw_spinlock_t *rq_lockp(struct rq *rq)
+{
+	return &rq->lock;
+}
+
+static __always_inline raw_spinlock_t *__rq_lockp(struct rq *rq)
+{
+	return &rq->lock;
+}
+
 static inline bool sched_cpu_cookie_match(struct rq *rq, struct task_struct *p)
 {
 	return true;
@@ -1241,36 +1297,31 @@ static inline bool sched_group_cookie_match(struct rq *rq,
 }
 #endif /* CONFIG_SCHED_CORE */
 
-static inline raw_spinlock_t *rq_lockp(struct rq *rq)
-{
-	return &rq->lock;
-}
-
 static inline void lockdep_assert_rq_held(struct rq *rq)
 {
-	lockdep_assert_held(rq_lockp(rq));
+	lockdep_assert_held(__rq_lockp(rq));
 }
 
 extern void raw_spin_rq_lock_nested(struct rq *rq, int subclass);
 extern bool raw_spin_rq_trylock(struct rq *rq);
 
-static inline void raw_spin_rq_lock(struct rq *rq)
+static __always_inline void raw_spin_rq_lock(struct rq *rq)
 {
 	raw_spin_rq_lock_nested(rq, 0);
 }
 
-static inline void raw_spin_rq_unlock(struct rq *rq)
+static __always_inline void raw_spin_rq_unlock(struct rq *rq)
 {
 	raw_spin_unlock(rq_lockp(rq));
 }
 
-static inline void raw_spin_rq_lock_irq(struct rq *rq)
+static __always_inline void raw_spin_rq_lock_irq(struct rq *rq)
 {
 	local_irq_disable();
 	raw_spin_rq_lock(rq);
 }
 
-static inline void raw_spin_rq_unlock_irq(struct rq *rq)
+static __always_inline void raw_spin_rq_unlock_irq(struct rq *rq)
 {
 	raw_spin_rq_unlock(rq);
 	local_irq_enable();
