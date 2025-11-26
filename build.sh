@@ -38,7 +38,7 @@ ANYKERNEL_PATH=AnyKernel3;
 # Define build variants and their corresponding fragments
 declare -A BUILD_VARIANTS_MAP=(
     ["vanilla"]=""
-    ["susfs"]="vendor/kernelsu.config"
+    ["ksu"]="vendor/kernelsu.config"
     ["debug"]="vendor/debug.config"
 )
 
