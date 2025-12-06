@@ -957,7 +957,6 @@ ssize_t cpu_show_spectre_v1(struct device *dev, struct device_attribute *attr,
 }
 
 static const char *get_bhb_affected_string(enum mitigation_state bhb_state)
-
 {
 	switch (bhb_state) {
 	case SPECTRE_UNAFFECTED:
