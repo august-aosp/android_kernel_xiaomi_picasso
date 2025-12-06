@@ -316,10 +316,11 @@ print_task(struct seq_file *m, struct rq *rq, struct task_struct *p)
 	else
 		SEQ_printf(m, " %c", task_state_to_char(p));
 
-	SEQ_printf(m, "%15s %5d %9Ld.%06ld %c %9Ld.%06ld %c %9Ld.%06ld %9Ld.%06ld %9Ld %5d ",
+	SEQ_printf(m, " %15s %5d %10ld %9Ld.%06ld   %c   %9Ld.%06ld %c %9Ld.%06ld %9Ld.%06ld %9Ld   %5d ",
 		p->comm, task_pid_nr(p),
+		p->se.h_load.weight,
 		SPLIT_NS(p->se.vruntime),
-		entity_eligible(cfs_rq_of(&p->se), &p->se) ? 'E' : 'N',
+		entity_eligible(&rq->cfs, &p->se) ? 'E' : 'N',
 		SPLIT_NS(p->se.deadline),
 		p->se.custom_slice ? 'S' : ' ',
 		SPLIT_NS(p->se.slice),
@@ -348,8 +349,16 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 
 	SEQ_printf(m, "\n");
 	SEQ_printf(m, "runnable tasks:\n");
-	SEQ_printf(m, " S           task   PID         tree-key  switches  prio"
-		   "     wait-time             sum-exec        sum-sleep\n");
+	SEQ_printf(m, " S            task   PID     weight       vruntime   eligible    "
+		   "deadline             slice          sum-exec      switches  "
+		   "prio         wait-time        sum-sleep       sum-block"
+#ifdef CONFIG_NUMA_BALANCING
+		   "  node   group-id"
+#endif
+#ifdef CONFIG_CGROUP_SCHED
+		   "  group-path"
+#endif
+		   "\n");
 	SEQ_printf(m, "-------------------------------------------------------"
 		   "----------------------------------------------------\n");
 
@@ -392,7 +401,7 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
 	last = __pick_last_entity(cfs_rq);
 	if (last)
 		right_vruntime = last->vruntime;
-	min_vruntime = cfs_rq->min_vruntime;
+	zero_vruntime = cfs_rq->zero_vruntime;
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 	sum_w_vruntime = cfs_rq->sum_w_vruntime;
 	avruntime = avg_vruntime(cfs_rq);
@@ -438,6 +447,8 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
 			cfs_rq->tg_load_avg_contrib);
 	SEQ_printf(m, "  .%-30s: %ld\n", "tg_load_avg",
 			atomic_long_read(&cfs_rq->tg->load_avg));
+	SEQ_printf(m, "  .%-30s: %lu\n", "h_load",
+			cfs_rq->h_load);
 #endif
 #endif
 #ifdef CONFIG_CFS_BANDWIDTH
@@ -762,6 +773,8 @@ void proc_sched_show_task(struct task_struct *p, struct pid_namespace *ns,
 	SEQ_printf(m, "%-45s:%14Ld.%06ld\n", #F, SPLIT_NS((long long)p->F))
 #define PN_SCHEDSTAT(F) \
 	SEQ_printf(m, "%-45s:%14Ld.%06ld\n", #F, SPLIT_NS((long long)schedstat_val(p->F)))
+#define PM(F, mask) \
+	SEQ_printf(m, "%-45s:%21Ld\n", #F, (long long)(p->F & (mask)))
 
 	PN(se.exec_start);
 	PN(se.vruntime);
@@ -849,6 +862,7 @@ void proc_sched_show_task(struct task_struct *p, struct pid_namespace *ns,
 #undef P_SCHEDSTAT
 #undef P
 #undef __P
+#undef PM
 
 	{
 		unsigned int this_cpu = raw_smp_processor_id();

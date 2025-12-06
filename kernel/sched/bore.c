@@ -66,15 +66,17 @@ static void reweight_task_by_prio(struct task_struct *p, int prio) {
 	if (task_has_idle_policy(p)) return;
 
 	struct sched_entity *se = &p->se;
-	unsigned long weight = scale_load(sched_prio_to_weight[prio]);
+	struct load_weight lw = {
+		.weight     = scale_load(sched_prio_to_weight[prio]),
+		.inv_weight = sched_prio_to_wmult[prio],
+	};
 
 	if (se->on_rq) {
 		p->bore.stop_update = true;
-		reweight_entity(cfs_rq_of(se), se, weight);
+		reweight_task(p, &lw);
 		p->bore.stop_update = false;
 	} else
-		se->load.weight = weight;
-	se->load.inv_weight = sched_prio_to_wmult[prio];
+		se->load = lw;
 }
 
 u8 effective_prio_bore(struct task_struct *p) {
