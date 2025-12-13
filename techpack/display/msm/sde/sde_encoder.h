@@ -182,7 +182,6 @@ struct sde_encoder_ops {
  *				after power collapse
  * @mode_info:                  stores the current mode and should be used
  *				 only in commit phase
- * @vsync_event_wq              Queue to wait for the vsync event complete
  */
 struct sde_encoder_virt {
 	struct drm_encoder base;
@@ -246,7 +245,6 @@ struct sde_encoder_virt {
 	bool recovery_events_enabled;
 	bool elevated_ahb_vote;
 	struct msm_mode_info mode_info;
-	wait_queue_head_t vsync_event_wq;
 };
 
 #define to_sde_encoder_virt(x) container_of(x, struct sde_encoder_virt, base)
