@@ -217,16 +217,6 @@ struct sde_irq {
 	struct dentry *debugfs_file;
 };
 
-/**
- * struct sde_kms_frame_event_cb_data : info of drm objects of a frame event
- * @crtc:       pointer to drm crtc object registered for frame event
- * @connector:  pointer to drm connector which is source of frame event
- */
-struct sde_kms_frame_event_cb_data {
-	struct drm_crtc *crtc;
-	struct drm_connector *connector;
-};
-
 struct sde_kms {
 	struct msm_kms base;
 	struct drm_device *dev;
