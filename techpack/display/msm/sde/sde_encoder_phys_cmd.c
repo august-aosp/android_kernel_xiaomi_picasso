@@ -327,7 +327,6 @@ static void _sde_encoder_phys_cmd_setup_irq_hw_idx(
 	struct sde_encoder_irq *irq;
 	struct sde_kms *sde_kms;
 	int ret = 0;
-	u32 vblank_refcount;
 
 	if (!phys_enc || !phys_enc->hw_pp || !phys_enc->hw_ctl) {
 		SDE_ERROR("invalid args %d %d\n", !phys_enc,
@@ -341,29 +340,20 @@ static void _sde_encoder_phys_cmd_setup_irq_hw_idx(
 	}
 
 	sde_kms = phys_enc->sde_kms;
+	mutex_lock(&sde_kms->vblank_ctl_global_lock);
 
-	mutex_lock(phys_enc->vblank_ctl_lock);
-	vblank_refcount = atomic_read(&phys_enc->vblank_refcount);
-	if (vblank_refcount) {
+	if (atomic_read(&phys_enc->vblank_refcount)) {
+		SDE_ERROR(
+		"vblank_refcount mismatch detected, try to reset %d\n",
+				atomic_read(&phys_enc->vblank_refcount));
 		ret = sde_encoder_helper_unregister_irq(phys_enc,
 				INTR_IDX_RDPTR);
 		if (ret)
 			SDE_ERROR(
 				"control vblank irq registration error %d\n",
 					ret);
-		if (vblank_refcount > 1)
-			SDE_ERROR(
-				"vblank_refcount mismatch detected, try to reset %d\n",
-				atomic_read(&phys_enc->vblank_refcount));
-		else
-			atomic_set(&phys_enc->vblank_cached_refcount, 1);
-
-		SDE_EVT32(DRMID(phys_enc->parent),
-			phys_enc->hw_pp->idx - PINGPONG_0, vblank_refcount,
-			atomic_read(&phys_enc->vblank_cached_refcount));
 	}
 	atomic_set(&phys_enc->vblank_refcount, 0);
-	mutex_unlock(phys_enc->vblank_ctl_lock);
 
 	irq = &phys_enc->irq[INTR_IDX_CTL_START];
 	irq->hw_idx = phys_enc->hw_ctl->idx;
@@ -397,6 +387,9 @@ static void _sde_encoder_phys_cmd_setup_irq_hw_idx(
 		irq->hw_idx = phys_enc->hw_intf->idx;
 	else
 		irq->hw_idx = phys_enc->hw_pp->idx;
+
+	mutex_unlock(&sde_kms->vblank_ctl_global_lock);
+
 }
 
 static void sde_encoder_phys_cmd_cont_splash_mode_set(
@@ -830,7 +823,7 @@ static int sde_encoder_phys_cmd_control_vblank_irq(
 	struct sde_encoder_phys_cmd *cmd_enc =
 		to_sde_encoder_phys_cmd(phys_enc);
 	int ret = 0;
-	u32 refcount, cached_refcount;
+	int refcount;
 	struct sde_kms *sde_kms;
 
 	if (!phys_enc || !phys_enc->hw_pp) {
@@ -839,23 +832,17 @@ static int sde_encoder_phys_cmd_control_vblank_irq(
 	}
 	sde_kms = phys_enc->sde_kms;
 
-	mutex_lock(phys_enc->vblank_ctl_lock);
+	mutex_lock(&sde_kms->vblank_ctl_global_lock);
+	refcount = atomic_read(&phys_enc->vblank_refcount);
+
 	/* Slave encoders don't report vblank */
 	if (!sde_encoder_phys_cmd_is_master(phys_enc))
 		goto end;
 
-	refcount = atomic_read(&phys_enc->vblank_refcount);
-	cached_refcount = atomic_read(&phys_enc->vblank_cached_refcount);
-
 	/* protect against negative */
 	if (!enable && refcount == 0) {
-		if (cached_refcount == 1) {
-			atomic_set(&phys_enc->vblank_cached_refcount, 0);
-			goto end;
-		} else {
-			ret = -EINVAL;
-			goto end;
-		}
+		ret = -EINVAL;
+		goto end;
 	}
 
 	SDE_DEBUG_CMDENC(cmd_enc, "[%pS] enable=%d/%d\n",
@@ -875,13 +862,7 @@ static int sde_encoder_phys_cmd_control_vblank_irq(
 			atomic_inc_return(&phys_enc->vblank_refcount);
 	}
 
-	if (enable && cached_refcount) {
-		atomic_inc(&phys_enc->vblank_refcount);
-		atomic_set(&phys_enc->vblank_cached_refcount, 0);
-	}
-
 end:
-	mutex_unlock(phys_enc->vblank_ctl_lock);
 	if (ret) {
 		SDE_ERROR_CMDENC(cmd_enc,
 				"control vblank irq error %d, enable %d, refcount %d\n",
@@ -891,6 +872,7 @@ end:
 				enable, refcount, SDE_EVTLOG_ERROR);
 	}
 
+	mutex_unlock(&sde_kms->vblank_ctl_global_lock);
 	return ret;
 }
 
@@ -2079,7 +2061,6 @@ struct sde_encoder_phys *sde_encoder_phys_cmd_init(
 	irq->cb.func = sde_encoder_phys_cmd_wr_ptr_irq;
 
 	atomic_set(&phys_enc->vblank_refcount, 0);
-	atomic_set(&phys_enc->vblank_cached_refcount, 0);
 	atomic_set(&phys_enc->pending_kickoff_cnt, 0);
 	atomic_set(&phys_enc->pending_retire_fence_cnt, 0);
 	atomic_set(&cmd_enc->pending_vblank_cnt, 0);
