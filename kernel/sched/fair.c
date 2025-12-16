@@ -7338,10 +7338,8 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 			long spare_cap;
 			int idle_idx = INT_MAX;
 
-			trace_sched_cpu_util(i);
-
-                        if (!cpu_online(i))
-                                continue;
+			if (!cpu_online(i))
+					continue;
 
 			/*
 			 * This CPU is the target of an active migration that's
