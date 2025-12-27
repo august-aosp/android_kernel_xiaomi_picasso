@@ -193,6 +193,7 @@ save_defconfig(){
     echo "Finished. Kernel config saved to $OUT/.config"
     echo "Moving kernel defconfig to source tree"
     cp $OUT/.config $DEFCONFIG_PATH/$DEFCONFIG_NAME
+    sed -i '/^# General setup$/,$!d;/^# General setup$/i#' $DEFCONFIG_PATH/$DEFCONFIG_NAME
     echo "Kernel Config Build Costed $(($COST_SEC/60))min $(($COST_SEC%60))s"
 
 }
