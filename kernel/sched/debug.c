@@ -605,10 +605,12 @@ static void sched_debug_header(struct seq_file *m)
 #undef PN
 #undef P
 
+#ifndef CONFIG_SCHED_BORE
 	SEQ_printf(m, "  .%-40s: %d (%s)\n",
 		"sysctl_sched_tunable_scaling",
 		sysctl_sched_tunable_scaling,
 		sched_tunable_scaling_names[sysctl_sched_tunable_scaling]);
+#endif /* CONFIG_SCHED_BORE */
 	SEQ_printf(m, "\n");
 }
 
