@@ -68,11 +68,6 @@ bool raw_spin_rq_trylock(struct rq *rq)
 	return raw_spin_trylock(rq_lockp(rq));
 }
 
-void raw_spin_rq_unlock(struct rq *rq)
-{
-	raw_spin_unlock(rq_lockp(rq));
-}
-
 /*
  * __task_rq_lock - lock the rq @p resides on.
  */
