@@ -55,7 +55,7 @@ ifeq ($(CONFIG_BROKEN_GAS_INST),y)
 $(warning Detected assembler with broken .inst; disassembly will be unreliable)
 endif
 
-ifeq ($(cc-name),clang)
+ifdef CONFIG_CC_IS_CLANG
 KBUILD_CFLAGS	+= -mno-implicit-float
 else
 KBUILD_CFLAGS	+= -mgeneral-regs-only
@@ -63,7 +63,7 @@ endif
 KBUILD_CFLAGS	+= $(compat_vdso) $(cc_has_k_constraint)
 
 ifeq ($(CONFIG_ARCH_LITO), y)
-ifeq ($(cc-name),clang)
+ifdef CONFIG_CC_IS_CLANG
 KBUILD_CFLAGS   += -mcpu=cortex-a55
 KBUILD_AFLAGS   += -mcpu=cortex-a55
 ifeq ($(CONFIG_LD_IS_LLD), y)
