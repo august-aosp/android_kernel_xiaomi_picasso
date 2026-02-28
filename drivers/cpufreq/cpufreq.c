@@ -762,6 +762,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 					const char *buf, size_t count)
 {
 	int ret;
+#if 0
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
@@ -779,6 +780,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	if (new_policy.governor)
 		module_put(new_policy.governor->owner);
 
+#endif
 	return ret ? ret : count;
 }
 
