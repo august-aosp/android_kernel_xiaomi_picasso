@@ -950,3 +950,88 @@ static int __init sugov_register(void)
 	return cpufreq_register_governor(&schedutil_gov);
 }
 fs_initcall(sugov_register);
+
+/*************** Exported helpers for external cpufreq governors ***************/
+
+/**
+ * cpufreq_get_capacity_ref_freq - Get the reference frequency for capacity
+ * scaling of a given cpufreq policy.
+ * @policy: the cpufreq policy of the CPU in question.
+ *
+ * Return: the reference CPU frequency.
+ */
+unsigned long cpufreq_get_capacity_ref_freq(struct cpufreq_policy *policy)
+{
+	unsigned int freq;
+
+	if (arch_scale_freq_invariant())
+		freq = policy->cpuinfo.max_freq;
+	else
+		/*
+		 * Apply a 25% margin so that we select a higher frequency than
+		 * the current one before the CPU is fully busy:
+		 */
+		freq = policy->cur + (policy->cur >> 2);
+	
+	return freq;
+}
+EXPORT_SYMBOL_GPL(cpufreq_get_capacity_ref_freq);
+
+EXPORT_SYMBOL_GPL(sugov_effective_cpu_perf);
+
+/**
+ * cpufreq_get_effective_util - Get effective CPU utilization for frequency
+ * scaling, combining all scheduling classes and applying DVFS headroom.
+ * @cpu: the CPU number.
+ * @boost: additional utilization boost (e.g. from IO wait).
+ * @out_util: pointer to store the effective utilization (with DVFS headroom).
+ * @out_bw_min: pointer to store the minimum bandwidth requirement.
+ */
+void cpufreq_get_effective_util(int cpu, unsigned long boost,
+				unsigned long *out_util,
+				unsigned long *out_bw_min)
+{
+	unsigned long min, max, util = cpu_util_cfs(cpu_rq(cpu));
+
+	util = effective_cpu_util(cpu, util, &min, &max);
+	util = max(util, boost);
+	*out_bw_min = min;
+	*out_util = sugov_effective_cpu_perf(cpu, util, min, max);
+}
+EXPORT_SYMBOL_GPL(cpufreq_get_effective_util);
+
+/**
+ * cpufreq_cpu_dl_bw_exceeded - Check if DL bandwidth exceeds minimum.
+ * @cpu: the CPU number.
+ * @bw_min: the minimum bandwidth to compare against.
+ *
+ * Return: true if the deadline bandwidth of @cpu exceeds @bw_min.
+ */
+bool cpufreq_cpu_dl_bw_exceeded(int cpu, unsigned long bw_min)
+{
+	return cpu_bw_dl(cpu_rq(cpu)) > bw_min;
+}
+EXPORT_SYMBOL_GPL(cpufreq_cpu_dl_bw_exceeded);
+
+/**
+ * cpufreq_cpu_uclamp_capped - Check if CPU is capped by uclamp_max.
+ * @cpu: the CPU number.
+ *
+ * Return: true if the CPU's runqueue is capped by uclamp.
+ */
+bool cpufreq_cpu_uclamp_capped(int cpu)
+{
+	return false;
+}
+EXPORT_SYMBOL_GPL(cpufreq_cpu_uclamp_capped);
+
+/**
+ * cpufreq_scx_switched_all - Check if all tasks are managed by sched_ext.
+ *
+ * Return: true if SCX manages all fair class tasks.
+ */
+bool cpufreq_scx_switched_all(void)
+{
+	return false;
+}
+EXPORT_SYMBOL_GPL(cpufreq_scx_switched_all);
