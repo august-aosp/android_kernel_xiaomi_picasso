@@ -1175,7 +1175,7 @@ static inline void cancel_protect_slice(struct sched_entity *se)
  *
  * Which allows tree pruning through eligibility.
  */
-static struct sched_entity *__pick_eevdf(struct cfs_rq *cfs_rq, bool protect)
+static struct sched_entity *pick_eevdf(struct cfs_rq *cfs_rq, bool protect)
 {
 	struct rb_node *node = cfs_rq->tasks_timeline.rb_root.rb_node;
 	struct sched_entity *se = __pick_first_entity(cfs_rq);
@@ -1249,11 +1249,6 @@ found:
 		best = curr;
 
 	return best;
-}
-
-static struct sched_entity *pick_eevdf(struct cfs_rq *cfs_rq, bool protect)
-{
-        return __pick_eevdf(cfs_rq, protect);
 }
 
 struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq)
@@ -5389,9 +5384,8 @@ set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 static bool __dequeue_task(struct rq *rq, struct task_struct *p, int flags);
 
 static struct sched_entity *
-pick_next_entity(struct rq *rq, bool protect)
+pick_next_entity(struct rq *rq, struct cfs_rq *cfs_rq, bool protect)
 {
-	struct cfs_rq *cfs_rq = &rq->cfs;
 	struct sched_entity *se = pick_eevdf(cfs_rq, protect);
 
 	if (se->sched_delayed) {
@@ -8731,7 +8725,7 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 
 pick:
 	if (cfs_rq->h_nr_queued) {
-		nse = pick_next_entity(rq, preempt_action != PREEMPT_WAKEUP_SHORT);
+		nse = pick_next_entity(rq, cfs_rq, preempt_action != PREEMPT_WAKEUP_SHORT);
 		if (unlikely(!nse))
 			goto pick;
 
@@ -8779,7 +8773,7 @@ again:
 	if (cfs_rq->curr && cfs_rq->curr->on_rq)
 		update_curr(cfs_rq);
 
-	se = pick_next_entity(rq, true);
+	se = pick_next_entity(rq, cfs_rq, true);
 	if (!se)
 		goto again;
 
