@@ -4511,172 +4511,6 @@ static void detach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *s
 	trace_sched_load_cfs_rq(cfs_rq);
 }
 
-/*
- * Optional action to be done while updating the load average
- */
-#define UPDATE_TG	0x1
-#define SKIP_AGE_LOAD	0x2
-#define DO_ATTACH	0x4
-#define DO_DETACH	0x8
-#define UPDATE_UTIL_EST	0x10
-
-
-/* Update task and its cfs_rq load average */
-static inline void update_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
-{
-	u64 now = cfs_rq_clock_pelt(cfs_rq);
-	int decayed;
-
-	/*
-	 * Track task load average for carrying it to new CPU after migrated, and
-	 * track group sched_entity load average for task_h_load calc in migration
-	 */
-	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD))
-		__update_load_avg_se(now, cfs_rq, se);
-
-	decayed  = update_cfs_rq_load_avg(now, cfs_rq);
-	decayed |= propagate_entity_load_avg(se);
-
-	if (!se->avg.last_update_time && (flags & DO_ATTACH)) {
-
-		/*
-		 * DO_ATTACH means we're here from enqueue_entity().
-		 * !last_update_time means we've passed through
-		 * migrate_task_rq_fair() indicating we migrated.
-		 *
-		 * IOW we're enqueueing a task on a new CPU.
-		 */
-		attach_entity_load_avg(cfs_rq, se);
-		update_tg_load_avg(cfs_rq, 0);
-
-	} else if (flags & DO_DETACH) {
-		/*
-		 * DO_DETACH means we're here from dequeue_entity()
-		 * and we are migrating task out of the CPU.
-		 */
-		detach_entity_load_avg(cfs_rq, se);
-		update_tg_load_avg(cfs_rq, 0);
-	} else if (decayed) {
-		if (flags & UPDATE_TG)
-			update_tg_load_avg(cfs_rq, 0);
-	}
-	cfs_rq_util_change(cfs_rq, 0);
-}
-
-/*
- * Synchronize entity load avg of dequeued entity without locking
- * the previous rq.
- */
-void sync_entity_load_avg(struct sched_entity *se)
-{
-	struct cfs_rq *cfs_rq = cfs_rq_of(se);
-	u64 last_update_time;
-
-	last_update_time = cfs_rq_last_update_time(cfs_rq);
-	__update_load_avg_blocked_se(last_update_time, se);
-}
-
-/*
- * Task first catches up with cfs_rq, and then subtract
- * itself from the cfs_rq (task must be off the queue now).
- */
-void remove_entity_load_avg(struct sched_entity *se)
-{
-	struct cfs_rq *cfs_rq = cfs_rq_of(se);
-	unsigned long flags;
-
-	/*
-	 * tasks cannot exit without having gone through wake_up_new_task() ->
-	 * enqueue_task_fair() which will have added things to the cfs_rq,
-	 * so we can remove unconditionally.
-	 */
-
-	sync_entity_load_avg(se);
-
-	raw_spin_lock_irqsave(&cfs_rq->removed.lock, flags);
-	++cfs_rq->removed.nr;
-	cfs_rq->removed.util_avg	+= se->avg.util_avg;
-	cfs_rq->removed.load_avg	+= se->avg.load_avg;
-	cfs_rq->removed.runnable_avg	+= se->avg.runnable_avg;
-	raw_spin_unlock_irqrestore(&cfs_rq->removed.lock, flags);
-}
-
-static inline unsigned long cfs_rq_runnable_avg(struct cfs_rq *cfs_rq)
-{
-        return cfs_rq->avg.runnable_avg;
-}
-
-static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
-{
-	return cfs_rq->avg.load_avg;
-}
-
-static int newidle_balance(struct rq *this_rq, struct rq_flags *rf);
-
-
-static inline unsigned long task_runnable(struct task_struct *p)
-{
-	return READ_ONCE(p->se.avg.runnable_avg);
-}
-
-static inline unsigned long _task_util_est(struct task_struct *p)
-{
-	return READ_ONCE(p->se.avg.util_est) & ~UTIL_AVG_UNCHANGED;
-}
-
-unsigned long task_util_est(struct task_struct *p)
-{
-	return max(task_util(p), _task_util_est(p));
-}
-
-#ifdef CONFIG_UCLAMP_TASK
-static inline unsigned long uclamp_task_util(struct task_struct *p,
-					     unsigned long uclamp_min,
-					     unsigned long uclamp_max)
-{
-	return clamp(task_util_est(p), uclamp_min, uclamp_max);
-}
-#else
-static inline unsigned long uclamp_task_util(struct task_struct *p,
-					     unsigned long uclamp_min,
-					     unsigned long uclamp_max)
-{
-	return task_util_est(p);
-}
-#endif
-
-static inline void util_est_enqueue(struct cfs_rq *cfs_rq,
-				    struct task_struct *p)
-{
-	unsigned int enqueued;
-
-	if (!sched_feat(UTIL_EST))
-		return;
-
-	/* Update root cfs_rq's estimated utilization */
-	enqueued  = cfs_rq->avg.util_est;
-	enqueued += _task_util_est(p);
-	WRITE_ONCE(cfs_rq->avg.util_est, enqueued);
-
-	/* Update plots for Task and CPU estimated utilization */
-	trace_sched_util_est_task(p, &p->se.avg);
-	trace_sched_util_est_cpu(cpu_of(rq_of(cfs_rq)), cfs_rq);
-}
-
-static inline void util_est_dequeue(struct cfs_rq *cfs_rq,
-				    struct task_struct *p)
-{
-	unsigned int enqueued;
-
-	if (!sched_feat(UTIL_EST))
-		return;
-
-	/* Update root cfs_rq's estimated utilization */
-	enqueued  = cfs_rq->avg.util_est;
-	enqueued -= min_t(unsigned int, enqueued, _task_util_est(p));
-	WRITE_ONCE(cfs_rq->avg.util_est, enqueued);
-}
-
 #define UTIL_EST_MARGIN (SCHED_CAPACITY_SCALE / 100)
 
 /*
@@ -4758,6 +4592,171 @@ static inline void util_est_update(struct sched_entity *se)
 done:
 	ewma |= UTIL_AVG_UNCHANGED;
 	WRITE_ONCE(se->avg.util_est, ewma);
+}
+
+/*
+ * Optional action to be done while updating the load average
+ */
+#define UPDATE_TG	0x1
+#define SKIP_AGE_LOAD	0x2
+#define DO_ATTACH	0x4
+#define DO_DETACH	0x8
+#define UPDATE_UTIL_EST	0x10
+
+
+/* Update task and its cfs_rq load average */
+static inline void update_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
+{
+	u64 now = cfs_rq_clock_pelt(cfs_rq);
+	int decayed;
+
+	/*
+	 * Track task load average for carrying it to new CPU after migrated, and
+	 * track group sched_entity load average for task_h_load calc in migration
+	 */
+	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD))
+		__update_load_avg_se(now, cfs_rq, se);
+
+	decayed  = update_cfs_rq_load_avg(now, cfs_rq);
+	decayed |= propagate_entity_load_avg(se);
+
+	if (!se->avg.last_update_time && (flags & DO_ATTACH)) {
+
+		/*
+		 * DO_ATTACH means we're here from enqueue_entity().
+		 * !last_update_time means we've passed through
+		 * migrate_task_rq_fair() indicating we migrated.
+		 *
+		 * IOW we're enqueueing a task on a new CPU.
+		 */
+		attach_entity_load_avg(cfs_rq, se);
+		update_tg_load_avg(cfs_rq, 0);
+
+	} else if (flags & DO_DETACH) {
+		/*
+		 * DO_DETACH means we're here from dequeue_entity()
+		 * and we are migrating task out of the CPU.
+		 */
+		detach_entity_load_avg(cfs_rq, se);
+		update_tg_load_avg(cfs_rq, 0);
+	} else if (decayed) {
+		if (flags & UPDATE_TG)
+			update_tg_load_avg(cfs_rq, 0);
+	}
+
+	if (flags & UPDATE_UTIL_EST)
+		util_est_update(se);
+
+	cfs_rq_util_change(cfs_rq, 0);
+}
+
+/*
+ * Synchronize entity load avg of dequeued entity without locking
+ * the previous rq.
+ */
+void sync_entity_load_avg(struct sched_entity *se)
+{
+	struct cfs_rq *cfs_rq = cfs_rq_of(se);
+	u64 last_update_time;
+
+	last_update_time = cfs_rq_last_update_time(cfs_rq);
+	__update_load_avg_blocked_se(last_update_time, se);
+}
+
+/*
+ * Task first catches up with cfs_rq, and then subtract
+ * itself from the cfs_rq (task must be off the queue now).
+ */
+void remove_entity_load_avg(struct sched_entity *se)
+{
+	struct cfs_rq *cfs_rq = cfs_rq_of(se);
+	unsigned long flags;
+
+	/*
+	 * tasks cannot exit without having gone through wake_up_new_task() ->
+	 * enqueue_task_fair() which will have added things to the cfs_rq,
+	 * so we can remove unconditionally.
+	 */
+
+	sync_entity_load_avg(se);
+
+	raw_spin_lock_irqsave(&cfs_rq->removed.lock, flags);
+	++cfs_rq->removed.nr;
+	cfs_rq->removed.util_avg	+= se->avg.util_avg;
+	cfs_rq->removed.load_avg	+= se->avg.load_avg;
+	cfs_rq->removed.runnable_avg	+= se->avg.runnable_avg;
+	raw_spin_unlock_irqrestore(&cfs_rq->removed.lock, flags);
+}
+
+static inline unsigned long cfs_rq_runnable_avg(struct cfs_rq *cfs_rq)
+{
+        return cfs_rq->avg.runnable_avg;
+}
+
+static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
+{
+	return cfs_rq->avg.load_avg;
+}
+
+static int newidle_balance(struct rq *this_rq, struct rq_flags *rf);
+
+
+static inline unsigned long _task_util_est(struct task_struct *p)
+{
+	return READ_ONCE(p->se.avg.util_est) & ~UTIL_AVG_UNCHANGED;
+}
+
+unsigned long task_util_est(struct task_struct *p)
+{
+	return max(task_util(p), _task_util_est(p));
+}
+
+#ifdef CONFIG_UCLAMP_TASK
+static inline unsigned long uclamp_task_util(struct task_struct *p,
+					     unsigned long uclamp_min,
+					     unsigned long uclamp_max)
+{
+	return clamp(task_util_est(p), uclamp_min, uclamp_max);
+}
+#else
+static inline unsigned long uclamp_task_util(struct task_struct *p,
+					     unsigned long uclamp_min,
+					     unsigned long uclamp_max)
+{
+	return task_util_est(p);
+}
+#endif
+
+static inline void util_est_enqueue(struct cfs_rq *cfs_rq,
+				    struct task_struct *p)
+{
+	unsigned int enqueued;
+
+	if (!sched_feat(UTIL_EST))
+		return;
+
+	/* Update root cfs_rq's estimated utilization */
+	enqueued  = cfs_rq->avg.util_est;
+	enqueued += _task_util_est(p);
+	WRITE_ONCE(cfs_rq->avg.util_est, enqueued);
+
+	/* Update plots for Task and CPU estimated utilization */
+	trace_sched_util_est_task(p, &p->se.avg);
+	trace_sched_util_est_cpu(cpu_of(rq_of(cfs_rq)), cfs_rq);
+}
+
+static inline void util_est_dequeue(struct cfs_rq *cfs_rq,
+				    struct task_struct *p)
+{
+	unsigned int enqueued;
+
+	if (!sched_feat(UTIL_EST))
+		return;
+
+	/* Update root cfs_rq's estimated utilization */
+	enqueued  = cfs_rq->avg.util_est;
+	enqueued -= min_t(unsigned int, enqueued, _task_util_est(p));
+	WRITE_ONCE(cfs_rq->avg.util_est, enqueued);
 }
 
 static inline bool
