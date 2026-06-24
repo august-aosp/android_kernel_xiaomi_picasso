@@ -8751,10 +8751,10 @@ update:
 	return;
 
 preempt:
-	if (preempt_action == PREEMPT_WAKEUP_SHORT) {
-		cancel_protect_slice(se);
+	cancel_protect_slice(se);
+
+	if (preempt_action == PREEMPT_WAKEUP_SHORT)
 		set_short_buddy(cfs_rq, pse);
-	}
 
 	resched_curr(rq);
 }
