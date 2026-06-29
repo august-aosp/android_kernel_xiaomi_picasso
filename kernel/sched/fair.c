@@ -64,7 +64,10 @@ enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_N
 #endif /* CONFIG_SCHED_BORE */
 
 /*
- * Minimal preemption granularity for CPU-bound tasks:
+ * Default base time slice (request size r_i) for SCHED_NORMAL/SCHED_BATCH:
+ *
+ * Under EEVDF this is the request size used to compute the virtual
+ * deadline; see update_deadline().
  *
  * BORE : base_slice = minimum multiple of nsecs_per_tick >= min_base_slice
  * (default min_base_slice = 2000000 constant, units: nanoseconds)
