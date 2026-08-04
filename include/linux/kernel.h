@@ -215,7 +215,7 @@ extern int _cond_resched(void);
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
 extern void ___might_sleep(const char *file, int line, int preempt_offset);
 extern void __might_sleep(const char *file, int line, int preempt_offset);
-extern void __cant_sleep(const char *file, int line, int preempt_offset);
+extern void __cant_sleep(const char *file, int line);
 
 /**
  * might_sleep - annotation for functions that can sleep
@@ -235,7 +235,7 @@ extern void __cant_sleep(const char *file, int line, int preempt_offset);
  * this macro will print a stack trace if it is executed with preemption enabled
  */
 # define cant_sleep() \
-	do { __cant_sleep(__FILE__, __LINE__, 0); } while (0)
+	do { __cant_sleep(__FILE__, __LINE__); } while (0)
 # define sched_annotate_sleep()	(current->task_state_change = 0)
 #else
   static inline void ___might_sleep(const char *file, int line,
