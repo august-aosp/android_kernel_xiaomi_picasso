@@ -6492,6 +6492,8 @@ requeue_delayed_entity(struct sched_entity *se, int flags)
 	SCHED_WARN_ON(!se->sched_delayed);
 	SCHED_WARN_ON(!se->on_rq);
 
+	update_curr(cfs_rq);
+
 	if (update_entity_lag(cfs_rq, se)) {
 #ifdef CONFIG_SCHED_BORE
 		if (likely(sched_bore))
