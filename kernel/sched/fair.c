@@ -8780,7 +8780,7 @@ again:
 
 	/* Might not have done put_prev_entity() */
 	if (cfs_rq->curr && cfs_rq->curr->on_rq)
-		update_curr(cfs_rq);
+		update_curr_eevdf(cfs_rq);
 
 	se = pick_next_entity(rq, cfs_rq, true);
 	if (!se)
@@ -8900,7 +8900,7 @@ static void yield_task_fair(struct rq *rq)
 	/*
 	 * Update run-time statistics of the 'current'.
 	 */
-	update_curr(cfs_rq);
+	update_curr_eevdf(cfs_rq);
 #ifdef CONFIG_SCHED_BORE
 	restart_burst_rescale_deadline_bore(curr);
 	if (unlikely(rq->nr_running == 1))
