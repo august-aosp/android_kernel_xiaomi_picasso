@@ -173,7 +173,7 @@ static inline void update_load_set(struct load_weight *lw, unsigned long w)
 #ifdef CONFIG_SCHED_BORE
 static void update_sysctl(void) {
 	sysctl_sched_base_slice = nsecs_per_tick *
-		max(1UL, DIV_ROUND_UP(sysctl_sched_min_base_slice, nsecs_per_tick));
+		max_t(unsigned long, 1UL, DIV_ROUND_UP(sysctl_sched_min_base_slice, nsecs_per_tick));
 }
 void sched_update_min_base_slice(void) { update_sysctl(); }
 #else /* !CONFIG_SCHED_BORE */
